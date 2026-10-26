@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>منصة الصحة المجتمعية - عامر الشريف</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Cairo -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: #f8fafc;
+            overflow-x: hidden;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* Laser Canvas */
+        #laser-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 9999;
+        }
+
+        /* Flashcard 3D Flip */
+        .perspective-1000 { perspective: 1000px; }
+        .transform-style-3d { transform-style: preserve-3d; }
+        .backface-hidden { backface-visibility: hidden; }
+        .rotate-y-180 { transform: rotateY(180deg); }
+        .flip-card-inner {
+            transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1);
+        }
+
+        /* Celebration Animations */
+        @keyframes celebration-pop {
+            0% { transform: scale(0); opacity: 0; }
+            40% { transform: scale(1.2); opacity: 1; }
+            60% { transform: scale(0.9); opacity: 1; }
+            80% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(0); opacity: 0; }
+        }
+        @keyframes shake-error {
+            0% { transform: scale(0); opacity: 0; }
+            30% { transform: scale(1.1); opacity: 1; }
+            40% { transform: scale(1) translateX(-10px); opacity: 1; }
+            50% { transform: scale(1) translateX(10px); opacity: 1; }
+            60% { transform: scale(1) translateX(-10px); opacity: 1; }
+            70% { transform: scale(1) translateX(10px); opacity: 1; }
+            80% { transform: scale(1) translateX(0); opacity: 1; }
+            100% { transform: scale(0); opacity: 0; }
+        }
+        .anim-correct { animation: celebration-pop 2s forwards ease-in-out; }
+        .anim-wrong { animation: shake-error 2s forwards ease-in-out; }
+
+        /* General Fade In */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in { animation: fadeIn 0.4s ease-out forwards; }
+
+        /* Selection Color */
+        ::selection {
+            background-color: #bbf7d0;
+            color: #000;
+        }
+        .custom-highlight {
+            background-color: #fef08a; /* Yellow */
+            color: #000;
+            border-radius: 4px;
+            padding: 0 4px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body class="flex flex-col h-screen overflow-hidden text-slate-800">
+
+    <!-- Laser Canvas -->
+    <canvas id="laser-canvas"></canvas>
+
+    <!-- Celebration Container -->
+    <div id="celebration-container" class="fixed inset-0 pointer-events-none z-[10000] flex items-center justify-center hidden bg-black/20 backdrop-blur-sm transition-all duration-300">
+        <div id="celebration-box" class="flex flex-col items-center justify-center p-12 rounded-[3rem] shadow-2xl transition-all">
+            <svg id="celebration-icon" class="w-36 h-36 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"></svg>
+            <h1 id="celebration-text" class="text-white text-5xl font-black mt-6 tracking-wide drop-shadow-xl"></h1>
+        </div>
+    </div>
+
+    <!-- Main Application Wrapper -->
+    <div class="flex flex-1 overflow-hidden relative">
+        
+        <!-- Sidebar -->
+        <aside id="sidebar" class="w-72 bg-slate-900 text-white flex flex-col shadow-2xl transition-all duration-300 z-30 flex-shrink-0">
+            <div class="p-6 border-b border-slate-800 flex items-center gap-3">
+                <svg class="w-10 h-10 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                <h1 class="text-2xl font-black bg-gradient-to-r from-emerald-400 to-teal-200 bg-clip-text text-transparent">الصحة المجتمعية</h1>
+            </div>
+            <nav class="flex-1 p-5 space-y-3 overflow-y-auto">
+                <button onclick="switchView('study')" id="nav-study" class="nav-btn w-full flex items-center gap-4 px-4 py-4 rounded-xl bg-emerald-600 text-white font-bold transition-all hover:bg-emerald-500 shadow-md text-lg">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
+                    المحتوى الدراسي
+                </button>
+                <button onclick="switchView('flashcards')" id="nav-flashcards" class="nav-btn w-full flex items-center gap-4 px-4 py-4 rounded-xl text-slate-300 font-semibold transition-all hover:bg-slate-800 text-lg">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"></path></svg>
+                    البطاقات الذكية
+                </button>
+                <button onclick="switchView('quiz')" id="nav-quiz" class="nav-btn w-full flex items-center gap-4 px-4 py-4 rounded-xl text-slate-300 font-semibold transition-all hover:bg-slate-800 text-lg">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path></svg>
+                    تحدي الأسئلة
+                </button>
+                <button onclick="switchView('focus')" id="nav-focus" class="nav-btn w-full flex items-center gap-4 px-4 py-4 rounded-xl text-slate-300 font-semibold transition-all hover:bg-slate-800 text-lg">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    جلسة التركيز
+                </button>
+            </nav>
+        </aside>
+
+        <!-- Main Content Wrapper -->
+        <main class="flex-1 flex flex-col relative overflow-hidden bg-slate-50">
+            
+            <!-- Topbar (Tools & Screen Modes) -->
+            <header class="h-20 bg-white border-b shadow-sm flex items-center justify-between px-8 z-20 shrink-0">
+                <h2 id="page-title" class="text-2xl font-black text-emerald-800 drop-shadow-sm tracking-wide">المحتوى الدراسي</h2>
+                
+                <div class="flex items-center gap-5">
+                    <!-- Tool: Highlighter -->
+                    <button id="btn-highlight" onclick="toggleHighlight()" class="p-3 rounded-xl border-2 text-slate-500 hover:bg-yellow-50 hover:text-yellow-600 hover:border-yellow-300 transition-all" title="قلم التحديد">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                    </button>
+                    
+                    <!-- Tool: Laser -->
+                    <button id="btn-laser" onclick="toggleLaser()" class="p-3 rounded-xl border-2 text-slate-500 hover:bg-red-50 hover:text-red-600 hover:border-red-300 transition-all" title="قلم الليزر">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"></path></svg>
+                    </button>
+
+                    <div class="w-px h-10 bg-slate-300 mx-2"></div>
+
+                    <!-- Layout Toggles -->
+                    <div class="flex bg-slate-100 p-1 rounded-xl border">
+                        <button onclick="setLayout('standard')" class="p-2.5 rounded-lg bg-white shadow-sm text-emerald-700 transition-all font-bold text-sm" id="btn-layout-std" title="عرض قياسي">قياسي</button>
+                        <button onclick="setLayout('split')" class="p-2.5 rounded-lg text-slate-500 hover:text-slate-800 transition-all font-bold text-sm" id="btn-layout-split" title="شاشة منقسمة">منقسمة</button>
+                        <button onclick="setLayout('full')" class="p-2.5 rounded-lg text-slate-500 hover:text-slate-800 transition-all font-bold text-sm" id="btn-layout-full" title="شاشة كاملة">كاملة</button>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Scrollable Content Area -->
+            <div id="content-layout-wrapper" class="flex-1 flex flex-row overflow-hidden p-6 gap-6">
+                
+                <!-- PDF Split Screen Placeholder (Hidden by default) -->
+                <div id="pdf-placeholder" class="hidden w-1/2 h-full bg-slate-200 rounded-2xl shadow-inner border border-slate-300 flex-col overflow-hidden relative">
+                    <div class="bg-slate-800 text-white p-3 text-center font-bold tracking-wide">
+                        عارض الملفات المرجعية (01-150.pdf)
+                    </div>
+                    <div class="flex-1 flex flex-col items-center justify-center text-slate-500 p-10 text-center">
+                        <svg class="w-24 h-24 mb-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        <h3 class="text-2xl font-black text-slate-700 mb-2">منطقة عرض المراجع</h3>
+                        <p class="text-lg">هذه المساحة مخصصة لعرض ملفات PDF المحلية الخاصة بك <br/>(مثل: <strong>01-150.pdf</strong> أو <strong>نصفي الصحة المجتمعية 1-6.pdf</strong>)</p>
+                        <p class="mt-4 text-sm text-slate-400">في بيئة الويب الحقيقية، سيتم تضمين الملف هنا باستخدام iframe.</p>
+                    </div>
+                </div>
+
+                <!-- Active View Container -->
+                <div id="active-view-container" class="flex-1 h-full overflow-y-auto bg-white rounded-2xl shadow-sm border border-slate-200 p-8 relative">
+                    
+                    <!-- View 1: Study Hub -->
+                    <div id="view-study" class="view-section fade-in max-w-5xl mx-auto">
+                        <div class="bg-emerald-50 p-6 rounded-2xl border border-emerald-100 mb-8">
+                            <h2 class="text-3xl font-black text-emerald-800 mb-2">ملخص شامل: الصحة المجتمعية</h2>
+                            <p class="text-emerald-700 font-semibold">تغطي هذه المنصة المحاضرات من 1 إلى 6 بشكل كامل استعداداً للاختبارات.</p>
+                        </div>
+                        
+                        <div class="space-y-10 text-xl leading-loose text-slate-700" id="study-text-area">
+                            <section>
+                                <h3 class="text-2xl font-black text-emerald-700 mb-4 border-b-2 border-slate-100 pb-2 flex items-center gap-2">
+                                    <span class="bg-emerald-600 text-white w-8 h-8 flex items-center justify-center rounded-full text-lg">1</span> 
+                                    مقدمة ومحددات الصحة
+                                </h3>
+                                <p class="mb-2"><strong class="text-emerald-900">الصحة العامة (Public Health):</strong> العلم والفن الذي يركز على الوقاية من الأمراض وتعزيز صحة الأفراد عبر التدخلات الجماعية.</p>
+                                <p class="mb-2"><strong class="text-emerald-900">العدالة الصحية (Health Equity):</strong> تحقيق المساواة في فرص الوصول إلى الرعاية والخدمات الصحية.</p>
+                                <p class="mb-2"><strong>العوامل المؤثرة:</strong> بيئية (تلوث، مياه)، اقتصادية (مستوى الدخل، بطالة)، اجتماعية وثقافية، وسياسات عامة. <br/>* يعتبر <strong>التعليم</strong> (خاصة تعليم النساء) العامل الثاني الأكثر تأثيراً على الصحة، ويقاس الاقتصاد بـ <strong>الناتج المحلي الإجمالي (GNP)</strong>.</p>
+                                <p><strong class="text-emerald-900">التدرج الاجتماعي:</strong> الاختلافات الاجتماعية والاقتصادية؛ ذوو الوضع الأعلى يتمتعون بصحة أفضل.</p>
+                            </section>
+
+                            <section>
+                                <h3 class="text-2xl font-black text-emerald-700 mb-4 border-b-2 border-slate-100 pb-2 flex items-center gap-2">
+                                    <span class="bg-emerald-600 text-white w-8 h-8 flex items-center justify-center rounded-full text-lg">2</span> 
+                                    مبادئ وأنواع الأمراض
+                                </h3>
+                                <p class="mb-2"><strong>المرض:</strong> حالة قصور غير طبيعية. يبدأ التطور من <em>الخلية ➔ النسيج ➔ العضو ➔ الجهاز</em>.</p>
+                                <ul class="list-disc pl-5 rtl:pr-8 mb-4 space-y-2">
+                                    <li><strong>الوقاية الأولية:</strong> منع المرض قبل ظهوره (تطعيمات، تغذية).</li>
+                                    <li><strong>الوقاية الثانوية:</strong> الاكتشاف المبكر والعلاج قبل المضاعفات (فحص دوري).</li>
+                                    <li><strong>الوقاية الثالثية:</strong> تقليل المضاعفات والعجز (تأهيل).</li>
+                                </ul>
+                                <p>تنقسم الأمراض إلى: معدية (تنتقل عبر ميكروبات كالملاريا)، مزمنة (السكري، الضغط)، حادة (تظهر فجأة كالزائدة الدودية)، وراثية، ومرتبطة بنمط الحياة.</p>
+                            </section>
+
+                            <section>
+                                <h3 class="text-2xl font-black text-emerald-700 mb-4 border-b-2 border-slate-100 pb-2 flex items-center gap-2">
+                                    <span class="bg-emerald-600 text-white w-8 h-8 flex items-center justify-center rounded-full text-lg">3</span> 
+                                    الأمراض المنتشرة في المجتمع السعودي
+                                </h3>
+                                <ul class="list-disc pl-5 rtl:pr-8 space-y-3">
+                                    <li><strong>السكري:</strong> انتشار 19% من البالغين (44% معرضون). الوفيات من مضاعفاته 14%.</li>
+                                    <li><strong>ارتفاع ضغط الدم:</strong> 34% (للفئة فوق 30 سنة).</li>
+                                    <li><strong>السرطان:</strong> الثدي الأكثر شيوعاً بالنساء (28.3%)، والقولون بالرجال (17.2%).</li>
+                                    <li><strong>حمى الضنك:</strong> معدي، ينتقل عبر (أنثى بعوضة الزاعجة المصرية).</li>
+                                    <li><strong>التهاب الكبد:</strong> (ب) و (ج) قد يتحولان للحالة المزمنة.</li>
+                                    <li><strong>فقر الدم المنجلي:</strong> يحمل 4.2% السمة، منتشر بكثرة في الشرقية والجنوبية بسبب زواج الأقارب.</li>
+                                    <li><strong>السمنة:</strong> انتشار 20.2% وزيادة الوزن 38.2%.</li>
+                                </ul>
+                            </section>
+
+                            <section>
+                                <h3 class="text-2xl font-black text-emerald-700 mb-4 border-b-2 border-slate-100 pb-2 flex items-center gap-2">
+                                    <span class="bg-emerald-600 text-white w-8 h-8 flex items-center justify-center rounded-full text-lg">4</span> 
+                                    التحصينات والأنماط الثقافية
+                                </h3>
+                                <p class="mb-2"><strong>أنواع اللقاحات:</strong> حية مضعفة (MMR، شلل أطفال فموي - استجابة قوية)، معطلة (ميتة، تحتاج جرعات معززة)، بروتينية (التهاب الكبد ب)، مقترنة، جينية (DNA/RNA كوفيد-19)، ناقلة للفيروس.</p>
+                                <p class="mb-2">تحصينات الحج والعمرة: الحمى الشوكية والإنفلونزا الموسمية.</p>
+                                <p class="mb-2"><strong>التثقيف الصحي:</strong> عملية تعليمية لتغيير العادات السلبية (مثل قلة النشاط، والتدخين). من المبادرات: حملة "امش 30".</p>
+                                <p><strong>الفحص الطبي قبل الزواج:</strong> برنامج إلزامي، ساهم بفعالية في تقليل الأمراض الوراثية الناتجة عن زواج الأقارب.</p>
+                            </section>
+                        </div>
+                    </div>
+
+                    <!-- View 2: Flashcards -->
+                    <div id="view-flashcards" class="view-section hidden fade-in flex flex-col items-center justify-center min-h-[70vh]">
+                        <div class="text-center mb-10">
+                            <h2 class="text-4xl font-black text-emerald-800 mb-3">البطاقات الذكية للمراجعة</h2>
+                            <p class="text-slate-500 font-semibold text-lg">35+ بطاقة تغطي كافة المصطلحات في المحاضرات الست</p>
+                        </div>
+                        
+                        <!-- Flashcard Container -->
+                        <div class="perspective-1000 w-full max-w-2xl h-96 cursor-pointer group" onclick="toggleFlashcard()">
+                            <div id="flashcard-inner" class="relative w-full h-full transform-style-3d flip-card-inner rounded-[2rem] shadow-2xl">
+                                <!-- Front -->
+                                <div class="absolute inset-0 backface-hidden bg-white border-4 border-emerald-100 rounded-[2rem] flex flex-col items-center justify-center p-10 text-center">
+                                    <span class="text-emerald-500 font-bold mb-6 bg-emerald-50 px-5 py-2 rounded-full text-sm tracking-wide">انقر للكشف عن الإجابة</span>
+                                    <h3 id="fc-q" class="text-4xl font-black text-slate-800 leading-tight"></h3>
+                                </div>
+                                <!-- Back -->
+                                <div class="absolute inset-0 backface-hidden rotate-y-180 bg-gradient-to-br from-emerald-600 to-teal-500 rounded-[2rem] flex items-center justify-center p-10 text-center text-white">
+                                    <p id="fc-a" class="text-3xl font-bold leading-relaxed drop-shadow-md"></p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Controls -->
+                        <div class="flex items-center justify-between w-full max-w-2xl mt-10">
+                            <button onclick="prevCard()" class="p-5 bg-white rounded-full shadow-lg hover:bg-slate-50 text-slate-700 transition-all hover:scale-110">
+                                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5l7 7-7 7"></path></svg>
+                            </button>
+                            <div class="flex flex-col items-center">
+                                <span id="fc-counter" class="font-black text-emerald-600 text-2xl">1 / 40</span>
+                                <span class="text-sm text-slate-400 font-bold mt-1">بطاقة</span>
+                            </div>
+                            <button onclick="nextCard()" class="p-5 bg-white rounded-full shadow-lg hover:bg-slate-50 text-slate-700 transition-all hover:scale-110">
+                                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M15 19l-7-7 7-7"></path></svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- View 3: Quiz -->
+                    <div id="view-quiz" class="view-section hidden fade-in max-w-4xl mx-auto py-4">
+                        
+                        <!-- Quiz Setup -->
+                        <div id="quiz-setup" class="bg-white p-12 rounded-3xl shadow-xl border border-slate-100">
+                            <div class="text-center mb-10">
+                                <h2 class="text-4xl font-black text-emerald-800 mb-3">بنك الأسئلة الشامل (100 سؤال)</h2>
+                                <p class="text-slate-500 font-semibold text-lg">أسئلة غير مكررة ومصممة بدقة لتقييم مستواك</p>
+                            </div>
+                            
+                            <div class="space-y-6">
+                                <div>
+                                    <label class="block font-black text-slate-700 mb-3 text-lg">اختر عدد الأسئلة للاختبار الحالي:</label>
+                                    <select id="quiz-count" class="w-full p-4 border-2 border-slate-200 rounded-xl focus:ring-4 focus:ring-emerald-200 bg-slate-50 font-bold text-xl outline-none">
+                                        <option value="10">10 أسئلة (اختبار سريع)</option>
+                                        <option value="20">20 سؤال (نصفي مصغر)</option>
+                                        <option value="50">50 سؤال (اختبار مكثف)</option>
+                                        <option value="100">100 سؤال (الاختبار الشامل - كافة المحاضرات)</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="flex items-center justify-between p-5 bg-slate-50 rounded-xl border-2 border-slate-200">
+                                    <div>
+                                        <h4 class="font-bold text-slate-800 text-lg">المؤقت الزمني</h4>
+                                        <p class="text-slate-500">تفعيل تحدي الوقت لكل سؤال</p>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="quiz-timer-toggle" class="sr-only peer" checked onchange="document.getElementById('timer-settings').classList.toggle('hidden')">
+                                        <div class="w-14 h-7 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:-translate-x-full rtl:peer-checked:after:translate-x-[-100%] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-emerald-500"></div>
+                                    </label>
+                                </div>
+
+                                <div id="timer-settings" class="pl-4 border-r-4 border-emerald-400 mr-2 pr-4">
+                                    <label class="block font-bold text-slate-700 mb-2">الوقت بالثواني:</label>
+                                    <input type="number" id="quiz-time-input" value="60" min="10" max="120" class="w-full p-4 border-2 border-slate-200 rounded-xl bg-slate-50 font-bold text-lg outline-none focus:border-emerald-500">
+                                </div>
+
+                                <div class="flex items-center justify-between p-5 bg-slate-50 rounded-xl border-2 border-slate-200">
+                                    <div>
+                                        <h4 class="font-bold text-slate-800 text-lg">خلط الأسئلة (Shuffle)</h4>
+                                        <p class="text-slate-500">سحب عشوائي للأسئلة في كل مرة</p>
+                                    </div>
+                                    <label class="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" id="quiz-shuffle-toggle" class="sr-only peer" checked>
+                                        <div class="w-14 h-7 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:-translate-x-full rtl:peer-checked:after:translate-x-[-100%] peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-emerald-500"></div>
+                                    </label>
+                                </div>
+
+                                <button onclick="startQuiz()" class="w-full mt-8 py-5 bg-gradient-to-l from-emerald-600 to-teal-500 text-white font-black text-2xl rounded-2xl shadow-xl hover:shadow-2xl hover:scale-[1.02] transition-all">
+                                    ابدأ التحدي
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Quiz Playing -->
+                        <div id="quiz-playing" class="hidden h-full flex-col">
+                            <div class="flex justify-between items-center mb-8 border-b-2 border-slate-100 pb-5">
+                                <span id="quiz-progress" class="font-black text-slate-400 text-xl bg-slate-100 px-4 py-1 rounded-full">السؤال 1 / 100</span>
+                                <div id="quiz-timer-display" class="font-mono text-3xl font-black bg-slate-100 text-slate-700 px-6 py-2 rounded-xl border-2 border-slate-200 shadow-sm tracking-widest">00:60</div>
+                            </div>
+
+                            <h3 id="quiz-q-text" class="text-3xl font-black text-slate-800 mb-8 leading-relaxed"></h3>
+                            
+                            <div id="quiz-options" class="space-y-4 mb-8">
+                                <!-- Options injected via JS -->
+                            </div>
+
+                            <div id="quiz-explanation-box" class="hidden mt-auto p-6 bg-sky-50 border-2 border-sky-200 rounded-2xl shadow-sm">
+                                <h4 class="font-black text-sky-900 mb-3 text-2xl flex items-center gap-2">
+                                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                    التوضيح العلمي:
+                                </h4>
+                                <p id="quiz-exp-text" class="text-sky-800 text-xl mb-6 font-semibold leading-relaxed"></p>
+                                <div class="flex justify-between items-end">
+                                    <span id="quiz-ref-text" class="bg-sky-200 text-sky-900 font-bold px-4 py-2 rounded-lg text-sm border border-sky-300 shadow-sm"></span>
+                                    <button onclick="nextQuestion()" id="btn-next-q" class="px-10 py-4 bg-emerald-600 text-white rounded-xl font-black text-xl hover:bg-emerald-700 transition-all shadow-lg hover:scale-105">
+                                        السؤال التالي
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Quiz Finished -->
+                        <div id="quiz-finished" class="hidden text-center py-20 flex flex-col items-center justify-center min-h-[60vh]">
+                            <div class="relative">
+                                <svg class="w-40 h-40 text-yellow-400 mx-auto mb-8 drop-shadow-xl" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path></svg>
+                            </div>
+                            <h2 class="text-6xl font-black text-emerald-800 mb-6 drop-shadow-sm">اكتمل التحدي!</h2>
+                            <p class="text-3xl text-slate-600 mb-12 font-bold">النتيجة النهائية: <span id="quiz-final-score" class="font-black text-emerald-600 text-6xl mx-4 bg-emerald-50 px-6 py-2 rounded-2xl border-4 border-emerald-100"></span></p>
+                            <button onclick="resetQuizView()" class="px-12 py-5 bg-slate-900 text-white rounded-full font-black text-2xl hover:bg-slate-800 shadow-2xl transition-all hover:scale-110">
+                                العودة للقائمة الرئيسية
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- View 4: Focus Session -->
+                    <div id="view-focus" class="view-section hidden fade-in flex flex-col items-center justify-center min-h-[70vh]">
+                        <div class="bg-white p-16 rounded-[3rem] shadow-2xl border border-slate-100 text-center max-w-xl w-full">
+                            <svg class="w-24 h-24 text-rose-500 mx-auto mb-6 drop-shadow-lg" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            <h2 class="text-5xl font-black text-slate-800 mb-4">تقنية بومودورو</h2>
+                            <p class="text-slate-500 mb-12 font-bold text-xl">25 دقيقة من التركيز العميق</p>
+                            
+                            <div class="bg-slate-50 border-4 border-slate-100 rounded-[2.5rem] py-12 mb-12 shadow-inner">
+                                <span id="focus-timer-display" class="font-mono text-8xl font-black text-emerald-600 tracking-widest drop-shadow-sm">25:00</span>
+                            </div>
+                            
+                            <div class="flex items-center justify-center gap-8">
+                                <button onclick="toggleFocusTimer()" id="btn-focus-toggle" class="w-24 h-24 bg-emerald-600 text-white rounded-full flex items-center justify-center shadow-xl hover:bg-emerald-500 transition-all hover:scale-110">
+                                    <svg id="icon-play" class="w-12 h-12 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path></svg>
+                                    <svg id="icon-pause" class="w-12 h-12 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                </button>
+                                <button onclick="resetFocusTimer()" class="w-20 h-20 bg-slate-200 text-slate-600 rounded-full flex items-center justify-center shadow-md hover:bg-slate-300 transition-all hover:scale-110">
+                                    <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+            
+            <!-- Custom Footer -->
+            <footer class="bg-slate-900 py-4 shrink-0 relative z-20 border-t border-slate-800 shadow-lg">
+                <div class="text-center text-white font-bold text-lg tracking-wide">
+                    صنع بحب ❤️ <span class="text-emerald-400 mx-1">عامر الشريف</span>
+                </div>
+            </footer>
+        </main>
+    </div>
+
+    <!-- JavaScript Data and Logic -->
+    <script>
+        // --- 1. DATA: 35+ FLASHCARDS ---
+        const FLASHCARDS = [
+            // Lecture 1
+            { q: "ما هي الصحة العامة (Public Health)؟", a: "العلم والفن الذي يركز على الوقاية من الأمراض وتعزيز صحة الأفراد عبر التدخلات الجماعية." },
+            { q: "ما المقصود بـ 'البيئة الصحية'؟", a: "بيئة نظيفة وآمنة تشمل السكن الجيد، المياه النظيفة، والهواء النقي." },
+            { q: "عرف 'العدالة الصحية' (Health Equity).", a: "تحقيق المساواة في فرص الوصول إلى الرعاية والخدمات الصحية بين جميع الأفراد." },
+            { q: "ما هو 'التثقيف الصحي'؟", a: "توعية المجتمع وتعليمه العناية بصحته بالاعتماد على التغذية والنشاط البدني والبحث عن الرعاية." },
+            { q: "ما هي أبرز تحديات صحة المجتمع؟", a: "الأمراض المزمنة، الأوبئة، والتفاوت في الرعاية الصحية." },
+            // Lecture 2
+            { q: "ما هو 'التدرج الاجتماعي' (Social Gradient)؟", a: "الاختلافات الاجتماعية والاقتصادية في الصحة، حيث يتمتع الأفراد ذوو الوضع الأعلى بصحة أفضل." },
+            { q: "ما هو 'الاستبعاد الاجتماعي'؟", a: "التهميش أو الإقصاء من المشاركة المجتمعية والموارد، مما يؤدي إلى نتائج صحية سلبية." },
+            { q: "ما هو العامل الثاني الأكثر تأثيراً على الحالة الصحية؟", a: "التعليم، وخاصة تعليم النساء." },
+            { q: "كيف يقاس مستوى الدخل في المجتمع؟", a: "يتم قياسه بواسطة الناتج المحلي الإجمالي للفرد (GNP/GDP)." },
+            { q: "ما هو تأثير 'البطالة' على الصحة؟", a: "فقدان العمل يسبب أضراراً نفسية واجتماعية ويرتبط بمشاكل صحية جسدية وعقلية." },
+            { q: "ما هو العائق الرئيسي لتنفيذ التقنيات الصحية؟", a: "ليس التقنيات نفسها، بل النظام السياسي." },
+            // Lecture 3
+            { q: "ما هو تعريف 'المرض'؟", a: "حالة قصور غير طبيعية تؤثر على الجسم أو العقل. وتبدأ من مستوى الخلية." },
+            { q: "ما هو تسلسل مستويات التنظيم الحيوي؟", a: "ذرة ➔ خلية ➔ نسيج ➔ عضو ➔ جهاز ➔ كائن حي." },
+            { q: "متى تظهر أعراض المرض؟", a: "عندما يتضرر النسيج تظهر الأعراض، وتتطور عند تأثر العضو." },
+            { q: "ما هي الوقاية الأولية (Primary)؟", a: "منع حدوث المرض قبل ظهوره (مثل: التطعيمات، التغذية)." },
+            { q: "ما هي الوقاية الثانوية (Secondary)؟", a: "الاكتشاف المبكر للأمراض وعلاجها قبل المضاعفات (مثل: الفحص الدوري)." },
+            { q: "ما هي الوقاية الثالثية (Tertiary)؟", a: "تقليل المضاعفات والعجز الناتج عن الأمراض المزمنة (مثل: إعادة التأهيل)." },
+            { q: "ما هي 'الأمراض الحادة'؟", a: "أمراض تظهر فجأة وتستمر لفترة قصيرة، كالتهاب الزائدة الدودية ونزلات البرد." },
+            { q: "ما هي 'الأمراض المكتسبة'؟", a: "أمراض تظهر لاحقاً نتيجة عوامل بيئية أو سلوكية وليست موروثة." },
+            // Lecture 4
+            { q: "كم تبلغ نسبة انتشار السكري في السعودية؟", a: "حوالي 19% من البالغين، و 44% معرضون للإصابة." },
+            { q: "ما الفرق بين السكري النوع الأول والثاني؟", a: "الأول: مناعي ذاتي يدمر خلايا البنكرياس. الثاني: مرتبط بنمط الحياة والسمنة." },
+            { q: "كم نسبة انتشار ارتفاع ضغط الدم بالسعودية؟", a: "حوالي 34% من البالغين فوق 30 سنة." },
+            { q: "ما هي السرطانات الأكثر شيوعاً في السعودية؟", a: "سرطان الثدي (للنساء 28.3%) وسرطان القولون (للرجال 17.2%)." },
+            { q: "كيف تنتقل 'حمى الضنك'؟", a: "مرض فيروسي ينتقل عبر لدغات أنثى بعوضة الزاعجة المصرية." },
+            { q: "أي من فيروسات التهاب الكبد يتحول غالباً للحالة المزمنة؟", a: "التهاب الكبد (ب) و (ج)." },
+            { q: "ما هو معدل انتشار فقر الدم المنجلي بالسعودية؟", a: "يحمل السمة 4.2%، مصابون 0.26%. وينتشر بكثرة في الشرقية والجنوبية." },
+            { q: "ما هو 'الثلاسيميا'؟", a: "مرض دم وراثي يسبب نقص إنتاج الهيموجلوبين، يحمل سمته حوالي 3.2% في السعودية." },
+            { q: "كم تبلغ نسبة السمنة وزيادة الوزن بالسعودية؟", a: "السمنة (BMI>30) تبلغ 20.2%، وزيادة الوزن 38.2%." },
+            // Lecture 5
+            { q: "ما هي 'مناعة القطيع' (Herd Immunity)؟", a: "حماية غير المحصنين عند وصول نسبة كافية من المجتمع إلى التحصين." },
+            { q: "ما هي 'اللقاحات الحية المضعفة'؟", a: "نسخ ضعيفة تسبب استجابة قوية وطويلة الأمد، مثل (MMR) وشلل الأطفال الفموي." },
+            { q: "ما هي 'اللقاحات المعطلة'؟", a: "تحتوي نسخ ميتة وتحتاج لجرعات معززة، مثل لقاح التهاب الكبد (أ)." },
+            { q: "ما هي 'اللقاحات الجينية'؟", a: "تعتمد على المادة الوراثية (DNA/RNA) لتحفيز المناعة، مثل لقاح فايزر." },
+            { q: "ما هي التحصينات الخاصة بالحج والعمرة؟", a: "لقاح الحمى الشوكية، ولقاح الإنفلونزا الموسمية." },
+            { q: "ما هي التحصينات الموصى بها للمرأة الحامل؟", a: "لقاح الكزاز والدفتيريا (خلال الثلث الثاني أو الثالث من الحمل)." },
+            // Lecture 6
+            { q: "ما هي تحديات التغذية في السعودية؟", a: "الاعتماد على الوجبات السريعة، استهلاك السكر والمشروبات الغازية، وقلة الخضار." },
+            { q: "كيف تؤثر قلة النوم على الصحة؟", a: "تزيد من مخاطر السمنة باضطراب هرمونات الشهية، وتضعف المناعة." },
+            { q: "ما هو تأثير زواج الأقارب؟", a: "يزيد احتمالية انتقال الأمراض الوراثية كالثلاسيميا وفقر الدم المنجلي." },
+            { q: "ما هي فائدة الفحص الطبي قبل الزواج؟", a: "إلزامي في السعودية لاكتشاف الأمراض الوراثية، وقلل انتشارها بشكل واضح." },
+            { q: "اذكر مبادرة للتشجيع على النشاط البدني في السعودية؟", a: "حملة التوعية بفوائد النشاط البدني تحت شعار 'امش 30'." },
+            { q: "ما هي العادات السيئة المنتشرة قبل النوم؟", a: "الاستخدام المفرط للأجهزة الإلكترونية (الشاشات)." }
+        ];
+
+        // --- 2. DATA: 100 UNIQUE MCQS ---
+        // Exactly 100 non-repeating questions divided carefully across the lectures.
+        const MCQS = [
+            // --- LECTURE 1 (16 Qs) ---
+            { q: "العلم والفن الذي يركز على الوقاية من الأمراض وتعزيز صحة الأفراد عبر التدخلات الجماعية هو:", opts: ["الطب السريري", "الصحة العامة", "التمريض", "المعلوماتية الصحية"], a: 1, exp: "هذا هو التعريف الأساسي للصحة العامة.", ref: "صفحة 4" },
+            { q: "من مقومات 'البيئة الصحية' (Healthy Environment):", opts: ["الدخل المرتفع", "السكن الجيد والمياه النظيفة", "التأمين الصحي المجاني", "المرافق الرياضية فقط"], a: 1, exp: "البيئة الصحية تشمل السكن الجيد، المياه النظيفة، والهواء النقي.", ref: "صفحة 4" },
+            { q: "العدالة الصحية (Health Equity) تعني:", opts: ["صرف أدوية مجانية للجميع", "تحقيق المساواة في فرص الوصول إلى الرعاية", "بناء مستشفيات متساوية الحجم", "توظيف كوادر طبية متساوية"], a: 1, exp: "العدالة الصحية هي تحقيق المساواة في الوصول للرعاية الصحية.", ref: "صفحة 4" },
+            { q: "من العوامل الاجتماعية والثقافية المؤثرة في صحة المجتمع:", opts: ["التلوث البيئي", "مستوى الدخل", "المعتقدات والعادات المجتمعية", "أنظمة التأمين"], a: 2, exp: "المعتقدات والعادات تصنف كعوامل ثقافية واجتماعية.", ref: "صفحة 4" },
+            { q: "من التحديات البارزة التي تواجه صحة المجتمع وتتزايد بسبب نمط الحياة غير الصحي:", opts: ["الأمراض الوراثية", "الأمراض المزمنة (كالسكري والسمنة)", "الحوادث المرورية", "الشيخوخة المبكرة"], a: 1, exp: "الأمراض المزمنة تحدٍ كبير سببه الأبرز نمط الحياة.", ref: "صفحة 13" },
+            { q: "ما هي الاستراتيجية التي تعتمد على تحسين البنية التحتية مثل المياه النظيفة والهواء النقي؟", opts: ["التثقيف الصحي", "الاستثمار في الصحة العامة", "تطوير السياسات الصحية", "التعاون بين القطاعات"], a: 1, exp: "تحسين البنية التحتية يندرج تحت الاستثمار في الصحة العامة.", ref: "صفحة 14" },
+            { q: "يساهم المجتمع الصحي اقتصادياً من خلال:", opts: ["خفض الأجور", "زيادة الإنتاجية وتقليل التكاليف الصحية", "زيادة استهلاك الأدوية", "رفع الضرائب"], a: 1, exp: "الصحة تساهم في زيادة الإنتاجية وتقليل تكاليف العلاج.", ref: "صفحة 12" },
+            { q: "سن تشريعات لفرض قوانين مكافحة التدخين يندرج تحت استراتيجية:", opts: ["التثقيف الصحي", "الاستثمار في الصحة العامة", "تطوير السياسات الصحية", "العدالة الصحية"], a: 2, exp: "سن القوانين والتشريعات يعد من تطوير السياسات الصحية.", ref: "صفحة 14" },
+            { q: "أحد أهداف رؤية المملكة 2030 المرتبط بصحة المجتمع هو:", opts: ["تحقيق رفاهية المجتمع وجودة الحياة", "بناء مصانع أدوية", "تقليل عدد المستشفيات", "إلغاء التأمين الصحي"], a: 0, exp: "الرؤية تهدف لتحقيق رفاهية المجتمع وجودة الحياة.", ref: "صفحة 12" },
+            { q: "ضمان حصول جميع أفراد المجتمع على طعام صحي ومغذي يعد جزءاً من:", opts: ["التعليم الصحي", "الصحة البيئية", "التغذية والأمن الغذائي", "الصحة النفسية"], a: 2, exp: "توفير الطعام الصحي جزء من الأمن الغذائي.", ref: "صفحة 15" },
+            { q: "أي مما يلي يُعد من المحددات 'الفردية' في الصحة المجتمعية؟", opts: ["نمط حياتك واختياراتك اليومية", "السياسات الحكومية", "الناتج المحلي الإجمالي", "أنظمة التأمين"], a: 0, exp: "نمط الحياة (الاختيارات اليومية كالغذاء والرياضة) محدد فردي.", ref: "صفحة 16" },
+            { q: "تلعب الحكومات دوراً في الصحة المجتمعية من خلال:", opts: ["التعليم الذاتي", "تمويل برامج الصحة الوقائية والتطعيم", "تحديد نوع الغذاء لكل فرد", "منع استيراد التكنولوجيا"], a: 1, exp: "تقديم وتمويل برامج الرعاية والتطعيم دور حكومي.", ref: "صفحة 17" },
+            { q: "تعليم الناس كيفية العناية بصحتهم والبحث عن الرعاية الطبية عند الحاجة يسمى:", opts: ["العدالة الصحية", "التثقيف / التعليم الصحي", "الأمن الغذائي", "الصحة البيئية"], a: 1, exp: "التعليم الصحي يوجه الأفراد للعناية بصحتهم.", ref: "صفحة 15" },
+            { q: "جهود مشتركة بين الحكومة والقطاع الخاص والمجتمع المدني لتحسين الصحة هو تعريف لـ:", opts: ["البيئة الصحية", "التدرج الاجتماعي", "التعاون بين القطاعات", "الوقاية الثالثية"], a: 2, exp: "Intersectoral Collaboration هو التعاون بين القطاعات.", ref: "صفحة 4" },
+            { q: "تقليل الوصمة الاجتماعية المتعلقة بالمشاكل النفسية يدعم:", opts: ["الصحة البيئية", "الأمن الغذائي", "الصحة النفسية والرفاهية", "الصحة البدنية فقط"], a: 2, exp: "تخفيف الوصمة يحسن الصحة النفسية.", ref: "صفحة 15" },
+            { q: "الأمراض المعدية مثل فيروس كورونا تعتبر من التحديات التي تؤثر على:", opts: ["الصحة الفردية فقط", "الصحة العامة في مختلف أنحاء العالم", "الجانب الاقتصادي فقط", "قطاع التعليم فقط"], a: 1, exp: "الأوبئة تؤثر على الصحة العامة عالمياً.", ref: "صفحة 13" },
+
+            // --- LECTURE 2 (17 Qs) ---
+            { q: "التركيب الجيني الذي يجعل الفرد عرضة لأمراض معينة يندرج تحت العوامل:", opts: ["السلوكية", "البيئية", "البيولوجية", "الاجتماعية"], a: 2, exp: "الوراثة والجينات عوامل بيولوجية.", ref: "صفحة 28" },
+            { q: "أي مما يلي يُعد من 'الحالات السلوكية' المؤثرة على الصحة؟", opts: ["التشوهات الصبغية", "استهلاك الكحول والتدخين", "التلوث الهوائي", "الدخل المادي"], a: 1, exp: "السلوكيات تشمل التدخين والغذاء والنشاط البدني.", ref: "صفحة 29" },
+            { q: "البيئة 'الداخلية' (Internal Environment) تشير إلى:", opts: ["المنزل والأسرة", "الطقس والمناخ", "خلايا الجسم وأنسجته وأعضائه", "العادات اليومية"], a: 2, exp: "البيئة الداخلية تعني أعضاء الجسم وخلاياه التي تعمل بتناغم.", ref: "صفحة 31" },
+            { q: "البيئة المحلية أو 'المايكرو' تشمل:", opts: ["المناخ العام", "العادات اليومية كالتغذية والتدخين", "الهيكل الجيني", "السياسة الصحية"], a: 1, exp: "البيئة المايكرو تشمل العادات الشخصية واليومية.", ref: "صفحة 31" },
+            { q: "المقياس الأكثر قبولاً لتحديد الحالة الاقتصادية للدولة هو:", opts: ["عدد المستشفيات", "الناتج المحلي الإجمالي للفرد (GNP)", "معدل المواليد", "مستوى التعليم"], a: 1, exp: "الناتج المحلي الإجمالي للفرد هو المقياس الاقتصادي الأبرز.", ref: "صفحة 33" },
+            { q: "العامل الثاني الأكثر تأثيراً على الحالة الصحية، خاصة بالنسبة للنساء، هو:", opts: ["الوراثة", "التعليم", "الطقس", "التأمين الصحي"], a: 1, exp: "التعليم هو العامل الثاني الأقوى تأثيراً على الصحة.", ref: "صفحة 34" },
+            { q: "الأشخاص العاطلون عن العمل يظهرون معدلات أعلى من:", opts: ["الرفاهية", "الإنتاجية", "الأمراض والمشكلات العقلية والجسدية", "الصحة البدنية"], a: 2, exp: "البطالة ترتبط بمشاكل صحية جسدية ونفسية متعددة.", ref: "صفحة 35" },
+            { q: "العائق الرئيسي أمام تنفيذ التقنيات الصحية ليس التقنية نفسها بل:", opts: ["النظام السياسي", "نقص المرضى", "نقص الأطباء", "تطور الفيروسات"], a: 0, exp: "النظام السياسي والإرادة السياسية هما العائق الرئيسي غالباً.", ref: "صفحة 36" },
+            { q: "ظاهرة 'التدرج الاجتماعي' (Social Gradient) تعني أن:", opts: ["المرض يوزع بالتساوي", "ذوي الوضع الاجتماعي والاقتصادي الأعلى يتمتعون بصحة أفضل", "الفقراء أصحاء دائماً", "التعليم لا يؤثر على الصحة"], a: 1, exp: "كلما ارتفع الوضع الاجتماعي/الاقتصادي، تحسنت الصحة.", ref: "صفحة 25" },
+            { q: "التوتر المستمر وطويل المدى الذي يؤثر سلباً على الصحة يُسمى:", opts: ["التوتر المؤقت", "التوتر المزمن (Chronic Stress)", "التكيف الاجتماعي", "الصدمة الحادة"], a: 1, exp: "التوتر المزمن ضار جداً للصحة البدنية والعقلية.", ref: "صفحة 25" },
+            { q: "التهميش أو الإقصاء من المشاركة المجتمعية والموارد يُعرف بـ:", opts: ["الدعم الاجتماعي", "العدالة الصحية", "الاستبعاد الاجتماعي", "التدرج الطبقي"], a: 2, exp: "الاستبعاد الاجتماعي (Social Exclusion) هو التهميش.", ref: "صفحة 25" },
+            { q: "شبكة العلاقات الاجتماعية التي تساعد الأفراد على التكيف مع التحديات تسمى:", opts: ["الاستبعاد الاجتماعي", "الدعم الاجتماعي", "الحياة المبكرة", "الطبقة المخملية"], a: 1, exp: "الدعم الاجتماعي يعزز صحة الأفراد ومناعتهم.", ref: "صفحة 25" },
+            { q: "الظروف الصحية في فترة الطفولة والتي تؤثر على المدى الطويل تُعرف بـ:", opts: ["الحياة المبكرة (Early Life)", "الشيخوخة", "الوراثة", "البيئة المايكرو"], a: 0, exp: "الحياة المبكرة تؤثر بشكل كبير على نتائج الصحة طوال الحياة.", ref: "صفحة 25" },
+            { q: "الأمراض التاجية والسكري والسمنة قد تنتشر بكثرة أيضاً بين:", opts: ["الأطفال فقط", "الفئات الاجتماعية والاقتصادية العليا في بعض المجتمعات", "سكان الجبال فقط", "المزارعين"], a: 1, exp: "الفئات العليا قد تعاني من هذه الأمراض كأمراض نمط حياة.", ref: "صفحة 33" },
+            { q: "الأمية تعتبر سبباً رئيسياً لـ:", opts: ["تقليل الإعاقة", "الفقر، سوء التغذية، وارتفاع وفيات الرضع", "زيادة الدخل", "تحسين الصحة النفسية"], a: 1, exp: "الأمية ترتبط ارتباطاً وثيقاً بالفقر وسوء الصحة.", ref: "صفحة 34" },
+            { q: "من الأمراض المرتبطة بـ 'الشيخوخة':", opts: ["الحصبة", "أمراض القلب التاجية وارتفاع ضغط الدم", "شلل الأطفال", "التوحد"], a: 1, exp: "أمراض القلب والضغط والسكري تزداد مع الشيخوخة.", ref: "صفحة 38" },
+            { q: "تميل النساء إلى أن يكن أكثر عرضة للأمراض المتعلقة بـ:", opts: ["الصحة الإنجابية", "سرطان البروستاتا", "الصلع الوراثي", "إصابات الملاعب"], a: 0, exp: "النساء أكثر عرضة للأمراض المتعلقة بالصحة الإنجابية.", ref: "صفحة 39" },
+
+            // --- LECTURE 3 (17 Qs) ---
+            { q: "تعريف 'الصحة' الشامل هو:", opts: ["غياب المرض تماماً", "حالة الاتزان والسلامة الجسدية والعقلية والنفسية", "القوة العضلية فقط", "عدم وجود إعاقة ظاهرة"], a: 1, exp: "الصحة ليست مجرد غياب المرض، بل اتزان شامل.", ref: "صفحة 53" },
+            { q: "الترتيب الصحيح لمستويات التنظيم في الكائن الحي هو:", opts: ["خلية ➔ جهاز ➔ نسيج ➔ عضو", "ذرة ➔ خلية ➔ نسيج ➔ عضو ➔ جهاز", "عضو ➔ خلية ➔ جهاز ➔ نسيج", "نسيج ➔ عضو ➔ جهاز ➔ خلية"], a: 1, exp: "التسلسل الدقيق: ذرة، خلية، نسيج، عضو، جهاز، كائن.", ref: "صفحة 54" },
+            { q: "في أي مستوى من التنظيم الحيوي تبدأ المشكلة التي تسبب 'قصوراً في الوظيفة'؟", opts: ["مستوى الجهاز", "مستوى النسيج", "مستوى الخلية", "مستوى العضو"], a: 2, exp: "إصابة الخلايا تسبب قصوراً في الوظيفة.", ref: "صفحة 57" },
+            { q: "متى تظهر 'أعراض' المرض بوضوح على المريض؟", opts: ["عند إصابة الخلية مباشرة", "عند تضرر النسيج", "قبل حدوث الإصابة", "بعد الشفاء"], a: 1, exp: "تضرر النسيج يسبب ظهور الأعراض.", ref: "صفحة 57" },
+            { q: "الإجراءات التي تهدف لمنع حدوث المرض قبل ظهوره تُسمى:", opts: ["الوقاية الأولية", "الوقاية الثانوية", "الوقاية الثالثية", "العلاج التلطيفي"], a: 0, exp: "الوقاية الأولية (Primary) كالتطعيمات.", ref: "صفحة 52" },
+            { q: "الاكتشاف المبكر للأمراض (كالفحص الطبي الدوري) يُعتبر من:", opts: ["الوقاية الأولية", "الوقاية الثانوية", "الوقاية الثالثية", "مرحلة التأهيل"], a: 1, exp: "الوقاية الثانوية (Secondary) تهدف للاكتشاف المبكر.", ref: "صفحة 52" },
+            { q: "الوقاية الثالثية تهدف بشكل أساسي إلى:", opts: ["إعطاء التطعيمات", "تقليل المضاعفات والعجز وبرامج إعادة التأهيل", "علاج الأمراض المعدية البسيطة", "إجراء فحص ما قبل الزواج"], a: 1, exp: "الوقاية الثالثية تتعامل مع الأمراض المستعصية لتقليل العجز.", ref: "صفحة 52" },
+            { q: "الأمراض التي تنتقل من شخص لآخر عبر الميكروبات تسمى:", opts: ["الأمراض الوراثية", "الأمراض المعدية", "الأمراض النفسية", "الأمراض المستعصية"], a: 1, exp: "الأمراض المعدية سببها البكتيريا أو الفيروسات إلخ.", ref: "صفحة 62" },
+            { q: "من الأمثلة على 'الأمراض الحادة' (تظهر فجأة وتستمر لفترة قصيرة):", opts: ["السكري", "ارتفاع ضغط الدم", "التهاب الزائدة الدودية ونزلات البرد", "الربو"], a: 2, exp: "الزائدة ونزلات البرد أمراض حادة سريعة الظهور.", ref: "صفحة 67" },
+            { q: "الأمراض المزمنة تتميز بأنها:", opts: ["تشعرك بالمرض لأيام قليلة", "تستمر لفترات طويلة وغالباً بلا علاج شافٍ تماماً", "تنتقل عبر الهواء بسرعة", "لا يمكن السيطرة عليها مطلقاً"], a: 1, exp: "الأمراض المزمنة مستمرة وتتطلب إدارة طويلة الأمد.", ref: "صفحة 65" },
+            { q: "مرض الهيموفيليا (نزف الدم) يُصنف كمرض:", opts: ["معدي", "حاد", "وراثي", "سلوكي"], a: 2, exp: "الهيموفيليا مرض دم وراثي.", ref: "صفحة 68" },
+            { q: "أمراض تظهر لاحقاً في الحياة نتيجة عوامل بيئية أو سلوكية وليست موروثة:", opts: ["أمراض خلقية", "أمراض مكتسبة (Acquired)", "أمراض جينية", "أمراض معدية فقط"], a: 1, exp: "المكتسبة تظهر نتيجة عوامل محيطة ولا تورث جينياً.", ref: "صفحة 52" },
+            { q: "الربو يُصنف تحت أي فئة رئيسية من الأمراض؟", opts: ["معدية", "وراثية بحتة", "مزمنة", "حادة"], a: 2, exp: "الربو من أبرز الأمراض المزمنة التي تؤثر على الشعب الهوائية.", ref: "صفحة 65/89" },
+            { q: "الإنفلونزا تُعد من الأمراض:", opts: ["الوراثية", "المزمنة غير المعدية", "المعدية (فيروسية)", "النفسية"], a: 2, exp: "الإنفلونزا مرض تنفسي فيروسي معدي.", ref: "صفحة 62" },
+            { q: "أي من التالي يعد مرضاً 'طفيلياً' ينتقل عبر البعوض؟", opts: ["الإيدز", "السكري", "الملاريا", "التهاب الكبد"], a: 2, exp: "الملاريا مرض طفيلي يصيب خلايا الدم وينقله البعوض.", ref: "صفحة 62" },
+            { q: "أمراض تسببها العوامل البيئية الضارة كالتلوث تُعرف بـ:", opts: ["الأمراض السلوكية", "الأمراض البيئية (Environmental)", "الأمراض الوراثية", "الأمراض المناعية"], a: 1, exp: "الأمراض البيئية ناتجة عن التلوث.", ref: "صفحة 52" },
+            { q: "التصنيف الذي يضع 'السكري والضغط' في مجموعة واحدة هو التصنيف بناءً على:", opts: ["الجهاز المتأثر", "طبيعة المرض (مزمنة)", "الفئة العمرية", "الجنس"], a: 1, exp: "كلاهما من الأمراض المزمنة.", ref: "صفحة 59" },
+
+            // --- LECTURE 4 (20 Qs) ---
+            { q: "كم تبلغ نسبة البالغين المصابين بالسكري في السعودية تقريباً؟", opts: ["5%", "14%", "19%", "44%"], a: 2, exp: "النسبة هي 19% من البالغين مصابون.", ref: "صفحة 86" },
+            { q: "كم نسبة البالغين 'المعرضين' للإصابة بالسكري في السعودية؟", opts: ["19%", "25%", "34%", "44%"], a: 3, exp: "44% من البالغين معرضون للإصابة (مرحلة ما قبل السكري).", ref: "صفحة 86" },
+            { q: "نسبة الوفيات الناتجة عن مضاعفات السكري في السعودية تشكل:", opts: ["2%", "5%", "14%", "25%"], a: 2, exp: "14% من الوفيات بسبب مضاعفات السكري.", ref: "صفحة 86" },
+            { q: "السكري من 'النوع الأول' يتميز بأنه:", opts: ["ناتج عن السمنة", "اضطراب مناعي ذاتي يدمر خلايا البنكرياس (ينتقل وراثياً)", "يصيب كبار السن فقط", "يمكن علاجه بالمضادات الحيوية"], a: 1, exp: "النوع الأول سببه اضطراب مناعي ذاتي.", ref: "صفحة 85" },
+            { q: "كم نسبة انتشار 'ارتفاع ضغط الدم' بين البالغين (30 سنة فأكثر) في السعودية؟", opts: ["14%", "19%", "28%", "34%"], a: 3, exp: "انتشار ضغط الدم 34% بين البالغين.", ref: "صفحة 87" },
+            { q: "تصل نسبة انتشار 'الربو' في السعودية وخاصة بين الأطفال إلى:", opts: ["1.55%", "5%", "14%", "20%"], a: 1, exp: "الربو ينتشر بنسبة 5% خصوصاً عند الأطفال.", ref: "صفحة 89" },
+            { q: "أكثر أنواع السرطان شيوعاً عند 'النساء' في السعودية هو:", opts: ["سرطان الرئة", "سرطان الغدة الدرقية", "سرطان الثدي", "سرطان الرحم"], a: 2, exp: "سرطان الثدي هو الأول عند النساء بنسبة 28.3%.", ref: "صفحة 91" },
+            { q: "أكثر أنواع السرطان شيوعاً عند 'الرجال' في السعودية هو:", opts: ["سرطان الكبد", "سرطان الدم", "سرطان البروستاتا", "سرطان القولون والمستقيم (Colorectum)"], a: 3, exp: "سرطان القولون هو الأول عند الرجال بنسبة 17.2%.", ref: "صفحة 91" },
+            { q: "مرض فيروسي ينتقل عبر إناث بعوضة 'الزاعجة المصرية' ويسبب ارتفاع حرارة وطفح جلدي:", opts: ["الملاريا", "حمى الضنك", "الكوليرا", "التهاب الكبد ب"], a: 1, exp: "هذا وصف دقيق لمرض حمى الضنك.", ref: "صفحة 92" },
+            { q: "أي من فيروسات التهاب الكبد ينتقل عبر الدم أو الاتصال الجنسي وقد يتحول للحالة 'المزمنة'؟", opts: ["أ (A)", "ب (B)", "ج (C) فقط", "أ و د"], a: 1, exp: "التهاب الكبد (ب) ينتقل عبر الدم/الجنس وقد يتحول لمزمن.", ref: "صفحة 93" },
+            { q: "فيروسات التهاب الكبد التي غالباً ما 'تختفي ذاتياً' ولا تتحول لمزمنة هي:", opts: ["أ (A) و د (D)", "ب (B) و ج (C)", "ج (C) و د (D)", "أ (A) و ب (B)"], a: 0, exp: "الفيروسات أ و د تختفي ذاتياً في الغالب.", ref: "صفحة 93" },
+            { q: "مرض 'فقر الدم المنجلي' ينتشر بكثرة في السعودية في مناطق:", opts: ["الوسطى والشمالية", "الشرقية والجنوبية", "الغربية", "جميع المناطق بالتساوي"], a: 1, exp: "ينتشر في الشرقية والجنوبية بسبب كثرة زواج الأقارب.", ref: "صفحة 95" },
+            { q: "حوالي كم بالمئة من سكان السعودية يحملون 'سمة' (حامل للمرض) فقر الدم المنجلي؟", opts: ["0.26%", "1.2%", "3.2%", "4.2%"], a: 3, exp: "4.2% من سكان المملكة يحملون سمة المنجلي.", ref: "صفحة 95" },
+            { q: "مرض وراثي يسبب نقصاً في إنتاج الهيموجلوبين ومضاعفاته تشمل تضخم الطحال وبطء النمو:", opts: ["الهيموفيليا", "الثلاسيميا (Thalassemia)", "الربو", "اللوكيميا"], a: 1, exp: "الثلاسيميا يسبب نقص الهيموجلوبين وتشوهات العظام.", ref: "صفحة 96" },
+            { q: "كم تبلغ نسبة حمل سمة 'الثلاسيميا' بين سكان السعودية؟", opts: ["0.07%", "1.2%", "3.2%", "4.2%"], a: 2, exp: "3.2% من سكان المملكة يحملون سمة الثلاسيميا.", ref: "صفحة 96" },
+            { q: "حسب مؤشر كتلة الجسم (BMI)، تعتبر حالة 'السمنة' عند بلوغ المؤشر:", opts: ["18.5 فأقل", "18.5 - 24.9", "25 - 29.9", "30 وأعلى"], a: 3, exp: "مؤشر 30 فأعلى يعتبر سمنة.", ref: "صفحة 97" },
+            { q: "كم تبلغ نسبة انتشار السمنة (BMI > 30) بين البالغين في السعودية؟", opts: ["19.2%", "20.2%", "21.4%", "38.2%"], a: 1, exp: "السمنة تبلغ 20.2%.", ref: "صفحة 97" },
+            { q: "كم تبلغ نسبة انتشار 'زيادة الوزن' (الوزن الزائد وليس السمنة) بين البالغين بالسعودية؟", opts: ["20.2%", "34%", "38.2%", "44%"], a: 2, exp: "زيادة الوزن تبلغ 38.2%.", ref: "صفحة 97" },
+            { q: "هل معدل انتشار السمنة في السعودية أعلى بين النساء أم الرجال؟", opts: ["متساوٍ", "أعلى بين الرجال (21.4%)", "أعلى بين النساء (21.4% مقابل 19.2%)", "لا توجد إحصائيات"], a: 2, exp: "أعلى بين النساء بنسبة 21.4%.", ref: "صفحة 97" },
+            { q: "من أهم أسباب أمراض القلب والشرايين هو زيادة مستويات:", opts: ["الكوليسترول النافع (HDL)", "الكوليسترول الضار (LDL)", "فيتامين د", "الحديد"], a: 1, exp: "الـ LDL يسبب تراكم الدهون وتصلب الشرايين.", ref: "صفحة 88" },
+
+            // --- LECTURE 5 (15 Qs) ---
+            { q: "حماية غير المحصنين عند وصول نسبة كافية من المجتمع إلى التحصين يسمى بـ:", opts: ["التحصين السلبي", "مناعة القطيع (Herd Immunity)", "المناعة الطبيعية", "التطعيم المعزز"], a: 1, exp: "هذا هو مفهوم مناعة القطيع.", ref: "صفحة 108" },
+            { q: "اللقاحات التي تحتوي على أجزاء من الفيروس/البكتيريا بدل الكائن الكامل تسمى:", opts: ["حية مضعفة", "اللقاحات البروتينية (Subunit)", "اللقاحات الجينية", "المعطلة"], a: 1, exp: "اللقاحات تحت الوحدة (Subunit) كلقاح الكبد ب.", ref: "صفحة 108" },
+            { q: "لقاح الحصبة والنكاف والحصبة الألمانية (MMR) يعتبر من اللقاحات:", opts: ["المعطلة", "البروتينية", "الحية المضعفة (Live attenuated)", "المقترنة"], a: 2, exp: "لقاح MMR هو حي مضعف.", ref: "صفحة 112" },
+            { q: "أي من اللقاحات التالية يُعد مثالاً على 'اللقاحات المعطلة' (الميتة)؟", opts: ["لقاح شلل الأطفال الفموي", "لقاح التهاب الكبد (أ)", "لقاح كورونا فايزر", "لقاح الحمى الشوكية"], a: 1, exp: "لقاح التهاب الكبد أ من اللقاحات المعطلة.", ref: "صفحة 112" },
+            { q: "لقاح فيروس الورم الحليمي البشري (HPV) يُصنف كلقاح:", opts: ["حي مضعف", "معطل", "بروتيني (تحت الوحدة)", "ناقل فيروسي"], a: 2, exp: "يعتبر من لقاحات السلالات البروتينية.", ref: "صفحة 112" },
+            { q: "مزيج بين جزء سكري وبروتين لتحفيز استجابة مناعية قوية يُعرف باللقاح:", opts: ["الجيني", "السلسلة السكرية المتقارنة (Conjugate)", "الميت", "الحي المضعف"], a: 1, exp: "المقترنة (Conjugate) مثل لقاح البكتيريا العقدية الرئوية.", ref: "صفحة 108/113" },
+            { q: "لقاحات كوفيد-19 من فايزر وموديرنا تعتمد على تقنية:", opts: ["الفيروس الميت", "الناقل الفيروسي", "المادة الوراثية (DNA/RNA)", "البروتين السطحي"], a: 2, exp: "هي لقاحات جينية mRNA.", ref: "صفحة 113" },
+            { q: "لقاح أسترازينيكا لكوفيد-19 يعتمد على تقنية:", opts: ["DNA/RNA", "اللقاحات الناقلة للفيروس (Viral Vector)", "البروتينات المقترنة", "الحية المضعفة"], a: 1, exp: "يستخدم فيروساً آخر كناقل للمادة الوراثية.", ref: "صفحة 113" },
+            { q: "من التطعيمات الإلزامية التي تفرضها وزارة الصحة للحجاج والمعتمرين:", opts: ["لقاح الكبد الوبائي (ج)", "لقاح الحمى الشوكية والإنفلونزا الموسمية", "لقاح الكزاز", "لقاح كورونا فقط"], a: 1, exp: "الحمى الشوكية والإنفلونزا من اللقاحات الأساسية للحج.", ref: "صفحة 116" },
+            { q: "للقادمين للحج من مناطق موبوءة، قد يُطلب لقاح إضافي هو:", opts: ["لقاح الحمى الصفراء", "لقاح الكلب", "لقاح الجدري", "لقاح الإيدز"], a: 0, exp: "لقاح الحمى الصفراء وشلل الأطفال يطلب من دول موبوءة.", ref: "صفحة 116" },
+            { q: "من اللقاحات الموصى بها لكبار السن (فوق 50 سنة) ومرضى السكري:", opts: ["لقاح الحصبة الألمانية", "لقاح الهربس النطاقي والبكتيريا الرئوية", "لقاح الكزاز", "لقاح شلل الأطفال"], a: 1, exp: "ينصح بلقاح الهربس النطاقي والإنفلونزا والرئوية.", ref: "صفحة 117" },
+            { q: "ما هو اللقاح الموصى به للمرأة أثناء فترة الحمل (الثلث الثاني/الثالث)؟", opts: ["الكزاز والدفتيريا", "الحصبة (MMR)", "الحمى الصفراء", "لا يُسمح بأي لقاح"], a: 0, exp: "ينصح بلقاح الكزاز والدفتيريا للحوامل.", ref: "صفحة 118" },
+            { q: "المملكة العربية السعودية خالية من أي مرض بفضل برنامج التحصينات؟", opts: ["الربو", "شلل الأطفال", "السكري", "الإنفلونزا"], a: 1, exp: "المملكة خالية من شلل الأطفال منذ سنوات.", ref: "صفحة 119" },
+            { q: "في الفحص الطبي الدوري، قياس مؤشر كتلة الجسم (BMI) يندرج تحت:", opts: ["التاريخ الطبي", "الفحص السريري", "التحاليل المخبرية", "الفحوص الإضافية"], a: 1, exp: "الطول والوزن ومؤشر الكتلة هي فحوصات سريرية.", ref: "صفحة 124" },
+            { q: "التحاليل المخبرية في الفحص الدوري تشمل عادة:", opts: ["تخطيط القلب", "التصوير بالأشعة", "قياس السكر والكوليسترول ووظائف الكبد", "التأهيل النفسي"], a: 2, exp: "السكر والكوليسترول هي تحاليل دم/بول مخبرية.", ref: "صفحة 124" },
+
+            // --- LECTURE 6 (15 Qs) ---
+            { q: "من التحديات المرتبطة بالتغذية السليمة في السعودية:", opts: ["نقص السكر", "كثرة استهلاك الخضروات", "الاعتماد على الوجبات السريعة عالية السعرات والمشروبات الغازية", "الصيام الطويل"], a: 2, exp: "الوجبات السريعة والمشروبات الغازية تحدٍ بارز.", ref: "صفحة 135" },
+            { q: "قلة النوم واضطراب نظام النوم يؤدي إلى زيادة مخاطر السمنة بسبب:", opts: ["تقوية العضلات", "اضطراب الهرمونات المسؤولة عن الشهية", "انخفاض الضغط", "زيادة شرب الماء"], a: 1, exp: "قلة النوم تخل بهرمونات الشهية مما يزيد الوزن.", ref: "صفحة 139" },
+            { q: "من العادات السلبية الشائعة التي تعيق جودة النوم:", opts: ["الاسترخاء والتأمل", "القراءة المطبوعة", "الاستخدام المفرط للأجهزة الإلكترونية قبل النوم", "شرب الحليب"], a: 2, exp: "الشاشات قبل النوم تؤثر سلباً على جودة النوم.", ref: "صفحة 140" },
+            { q: "كم المدة الموصى بها للابتعاد عن الشاشات قبل النوم؟", opts: ["5 دقائق", "15 دقيقة", "ساعة", "لا داعي للابتعاد"], a: 2, exp: "ينصح بالابتعاد عن الشاشات قبل النوم بساعة.", ref: "صفحة 140" },
+            { q: "ما هي العادة الثقافية التي تزيد بشكل كبير من احتمالية انتقال الأمراض الوراثية كالثلاسيميا؟", opts: ["الزواج المتأخر", "زواج الأقارب", "تناول الأكل الشعبي", "الولادة المبكرة"], a: 1, exp: "زواج الأقارب يزيد من تمرير الجينات المتنحية المرضية.", ref: "صفحة 141" },
+            { q: "ما هو البرنامج 'الإلزامي' في السعودية الذي أدى لانخفاض ملحوظ في الأمراض الوراثية؟", opts: ["الفحص الطبي الدوري المدرسي", "برنامج 'امش 30'", "الفحص الطبي قبل الزواج", "حملة مكافحة السمنة"], a: 2, exp: "الفحص قبل الزواج كشف الاحتمالات وقلل الإصابات.", ref: "صفحة 143" },
+            { q: "انتشار استخدام 'الشيشة' بين الشباب في السعودية يصنف تحت:", opts: ["تحديات الأمراض المعدية", "تأثير التحضر الإيجابي", "العادات السلبية والتدخين المسببة للأمراض", "الرياضة البدنية"], a: 2, exp: "التدخين والشيشة يسببان أمراضاً خطيرة كالسرطان.", ref: "صفحة 142" },
+            { q: "العملية التعليمية التي تهدف لتعزيز السلوكيات الإيجابية وتغيير العادات السلبية تسمى:", opts: ["الرعاية الأولية", "التثقيف الصحي (Health Education)", "الطب الباطني", "العمل الاجتماعي"], a: 1, exp: "هذا تعريف التثقيف الصحي.", ref: "صفحة 133/144" },
+            { q: "من الحملات الناجحة في السعودية للتوعية بفوائد النشاط البدني تحت مظلة وزارة الصحة:", opts: ["حملة 'السكري لا ينتظر'", "حملة 'امش 30'", "حملة 'لا للمخدرات'", "حملة 'النوم المبكر'"], a: 1, exp: "امش 30 تهدف لتعزيز ثقافة المشي اليومي.", ref: "صفحة 144" },
+            { q: "من الحلول العملية المطبقة لتشجيع التغذية السليمة في السعودية:", opts: ["فرض ضرائب على المياه", "وضع ملصقات توضح السعرات الحرارية على الوجبات", "منع استيراد اللحوم تماماً", "توزيع فيتامينات مجانية يومياً"], a: 1, exp: "إلزام المطاعم بملصقات السعرات الحرارية من الحلول المطبقة.", ref: "صفحة 136" },
+            { q: "يساهم 'الفحص الدوري' في:", opts: ["علاج الأمراض المستعصية تماماً", "الكشف المبكر عن الأمراض وتقليل مضاعفاتها", "زيادة تكاليف العلاج", "إحداث طفرات جينية"], a: 1, exp: "الكشف المبكر يسهل العلاج ويقلل المضاعفات.", ref: "صفحة 145" },
+            { q: "تخصيص وقت للنشاط البدني كالمشي يعتبر من:", opts: ["العادات السلبية", "العادات الإيجابية المقترحة للصحة", "تأثير التحضر السلبي", "التثقيف النظري"], a: 1, exp: "النشاط البدني اليومي عادة صحية إيجابية.", ref: "صفحة 142" },
+            { q: "نمط الحياة الحضرية في السعودية أدى إلى تأثيرات، منها:", opts: ["زيادة النشاط البدني", "انخفاض معدل السكري", "تغييرات في العادات الغذائية وزيادة السمنة", "انعدام الأمراض الوراثية"], a: 2, exp: "التحضر السريع أدى لقلة الحركة وزيادة السمنة.", ref: "صفحة 142" },
+            { q: "ينصح بممارسة التمارين الرياضية البسيطة مثل المشي لمدة:", opts: ["5 دقائق أسبوعياً", "30 دقيقة يومياً", "ساعتين شهرياً", "10 دقائق كل يومين"], a: 1, exp: "المشي لـ 30 دقيقة يومياً من النصائح الصحية المعتمدة.", ref: "صفحة 138" },
+            { q: "الاسترخاء والتأمل ينصح بهما كعادات إيجابية لتحسين:", opts: ["الصحة النفسية", "الطول", "لون البشرة", "الحالة المادية"], a: 0, exp: "الاسترخاء يقلل التوتر ويحسن الصحة النفسية.", ref: "صفحة 142" }
+        ];
+
+        // --- GLOBAL STATE ---
+        let currentView = 'study';
+        let layoutMode = 'standard';
+        let highlightActive = false;
+        let laserActive = false;
+
+        // --- NAVIGATION & LAYOUT ---
+        function switchView(viewId) {
+            currentView = viewId;
+            // Update nav buttons
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('bg-emerald-600', 'text-white', 'shadow-md');
+                btn.classList.add('text-slate-300');
+            });
+            const activeBtn = document.getElementById(`nav-${viewId}`);
+            if(activeBtn) {
+                activeBtn.classList.add('bg-emerald-600', 'text-white', 'shadow-md');
+                activeBtn.classList.remove('text-slate-300');
+            }
+
+            // Update Views
+            document.querySelectorAll('.view-section').forEach(view => view.classList.add('hidden'));
+            document.getElementById(`view-${viewId}`).classList.remove('hidden');
+
+            // Title Update
+            const titles = { study: 'المحتوى الدراسي الشامل', flashcards: 'البطاقات الذكية والتفاعلية', quiz: 'اختبارات التحدي', focus: 'جلسة التركيز بومودورو' };
+            document.getElementById('page-title').innerText = titles[viewId];
+        }
+
+        function setLayout(mode) {
+            layoutMode = mode;
+            const sidebar = document.getElementById('sidebar');
+            const pdfView = document.getElementById('pdf-placeholder');
+            
+            // Highlight Buttons
+            ['std', 'split', 'full'].forEach(m => {
+                const btn = document.getElementById(`btn-layout-${m}`);
+                btn.classList.remove('bg-white', 'shadow-sm', 'text-emerald-700');
+                btn.classList.add('text-slate-500');
+            });
+            const activeBtn = document.getElementById(`btn-layout-${mode === 'standard' ? 'std' : mode}`);
+            activeBtn.classList.add('bg-white', 'shadow-sm', 'text-emerald-700');
+            activeBtn.classList.remove('text-slate-500');
+
+            // Layout Logic
+            sidebar.classList.remove('hidden');
+            pdfView.classList.add('hidden');
+
+            if (mode === 'full') {
+                sidebar.classList.add('hidden');
+            } else if (mode === 'split') {
+                pdfView.classList.remove('hidden');
+            }
+        }
+
+        // --- LASER PEN ---
+        const canvas = document.getElementById('laser-canvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+        let mouseX = -100, mouseY = -100;
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        window.addEventListener('mousemove', (e) => {
+            if (!laserActive) return;
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+            particles.push({ x: mouseX, y: mouseY, life: 1, size: Math.random() * 5 + 4 });
+        });
+
+        function animateLaser() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            if (laserActive) {
+                // Main dot
+                ctx.beginPath();
+                ctx.arc(mouseX, mouseY, 7, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(239, 68, 68, 0.9)'; // Tailwind red-500
+                ctx.shadowBlur = 25;
+                ctx.shadowColor = 'red';
+                ctx.fill();
+
+                // Trail
+                for (let i = 0; i < particles.length; i++) {
+                    let p = particles[i];
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(248, 113, 113, ${p.life})`; // Tailwind red-400
+                    ctx.shadowBlur = 0;
+                    ctx.fill();
+                    p.life -= 0.04;
+                }
+                particles = particles.filter(p => p.life > 0);
+            } else {
+                particles = [];
+            }
+            requestAnimationFrame(animateLaser);
+        }
+        animateLaser();
+
+        function toggleLaser() {
+            laserActive = !laserActive;
+            const btn = document.getElementById('btn-laser');
+            if (laserActive) btn.classList.add('bg-red-50', 'text-red-600', 'border-red-300');
+            else btn.classList.remove('bg-red-50', 'text-red-600', 'border-red-300');
+        }
+
+        // --- HIGHLIGHTER PEN ---
+        function toggleHighlight() {
+            highlightActive = !highlightActive;
+            const btn = document.getElementById('btn-highlight');
+            if (highlightActive) btn.classList.add('bg-yellow-50', 'text-yellow-600', 'border-yellow-400');
+            else btn.classList.remove('bg-yellow-50', 'text-yellow-600', 'border-yellow-400');
+        }
+
+        document.getElementById('study-text-area').addEventListener('mouseup', applyHighlight);
+        
+        function applyHighlight() {
+            if (!highlightActive) return;
+            const selection = window.getSelection();
+            if (!selection.isCollapsed && selection.rangeCount > 0) {
+                try {
+                    const range = selection.getRangeAt(0);
+                    const span = document.createElement('span');
+                    span.className = 'custom-highlight';
+                    range.surroundContents(span);
+                    selection.removeAllRanges();
+                } catch (e) {
+                    console.log("Highlighter cannot span multiple block elements in basic mode.");
+                }
+            }
+        }
+
+        // --- CELEBRATION ---
+        function triggerCelebration(isCorrect) {
+            const container = document.getElementById('celebration-container');
+            const box = document.getElementById('celebration-box');
+            const icon = document.getElementById('celebration-icon');
+            const text = document.getElementById('celebration-text');
+
+            box.className = 'flex flex-col items-center justify-center p-16 rounded-[3rem] shadow-2xl transition-all';
+            
+            if (isCorrect) {
+                box.classList.add('bg-emerald-500', 'anim-correct');
+                icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>';
+                text.innerText = 'إجابة مذهلة! رائع جداً';
+            } else {
+                box.classList.add('bg-rose-500', 'anim-wrong');
+                icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"></path>';
+                text.innerText = 'للأسف، إجابة خاطئة!';
+            }
+
+            container.classList.remove('hidden');
+            
+            setTimeout(() => {
+                container.classList.add('hidden');
+                box.classList.remove('anim-correct', 'anim-wrong', 'bg-emerald-500', 'bg-rose-500');
+            }, 2000);
+        }
+
+        // --- FLASHCARDS ---
+        let currentCard = 0;
+        let isFlipped = false;
+
+        function renderCard() {
+            document.getElementById('fc-q').innerText = FLASHCARDS[currentCard].q;
+            document.getElementById('fc-a').innerText = FLASHCARDS[currentCard].a;
+            document.getElementById('fc-counter').innerText = `${currentCard + 1} / ${FLASHCARDS.length}`;
+            if(isFlipped) toggleFlashcard(); // Reset flip state
+        }
+
+        function toggleFlashcard() {
+            const inner = document.getElementById('flashcard-inner');
+            isFlipped = !isFlipped;
+            if(isFlipped) inner.classList.add('rotate-y-180');
+            else inner.classList.remove('rotate-y-180');
+        }
+
+        function nextCard() {
+            if(currentCard < FLASHCARDS.length - 1) {
+                currentCard++;
+                renderCard();
+            } else {
+                currentCard = 0; // Loop back
+                renderCard();
+            }
+        }
+        function prevCard() {
+            if(currentCard > 0) {
+                currentCard--;
+                renderCard();
+            } else {
+                currentCard = FLASHCARDS.length - 1; // Loop end
+                renderCard();
+            }
+        }
+        // Init first card
+        renderCard();
+
+        // --- QUIZ ENGINE ---
+        let activeQuizQs = [];
+        let currQIndex = 0;
+        let quizScore = 0;
+        let quizTimerInterval;
+        let quizTimeLeft = 0;
+        let useTimer = false;
+        let timePerQ = 60;
+        let answered = false;
+
+        function startQuiz() {
+            const countSelect = document.getElementById('quiz-count').value;
+            useTimer = document.getElementById('quiz-timer-toggle').checked;
+            timePerQ = parseInt(document.getElementById('quiz-time-input').value) || 60;
+            const shuffle = document.getElementById('quiz-shuffle-toggle').checked;
+
+            let qs = [...MCQS];
+            if (shuffle) {
+                qs.sort(() => Math.random() - 0.5);
+            }
+            
+            let count = countSelect === '100' ? qs.length : parseInt(countSelect);
+            if(count > qs.length) count = qs.length;
+            activeQuizQs = qs.slice(0, count);
+            
+            currQIndex = 0;
+            quizScore = 0;
+
+            document.getElementById('quiz-setup').classList.add('hidden');
+            document.getElementById('quiz-playing').classList.remove('hidden');
+            document.getElementById('quiz-timer-display').style.display = useTimer ? 'block' : 'none';
+
+            renderQuestion();
+        }
+
+        function renderQuestion() {
+            answered = false;
+            document.getElementById('quiz-explanation-box').classList.add('hidden');
+            const q = activeQuizQs[currQIndex];
+            
+            document.getElementById('quiz-progress').innerText = `السؤال ${currQIndex + 1} / ${activeQuizQs.length}`;
+            document.getElementById('quiz-q-text').innerText = q.q;
+
+            const optsContainer = document.getElementById('quiz-options');
+            optsContainer.innerHTML = '';
+            
+            q.opts.forEach((opt, idx) => {
+                const btn = document.createElement('button');
+                btn.className = 'quiz-opt-btn w-full text-right p-6 rounded-2xl border-2 border-slate-200 bg-slate-50 font-bold text-xl hover:border-emerald-400 hover:bg-emerald-50 hover:shadow-md transition-all';
+                btn.innerText = opt;
+                btn.onclick = () => handleAnswer(idx, btn);
+                optsContainer.appendChild(btn);
+            });
+
+            if (useTimer) {
+                quizTimeLeft = timePerQ;
+                updateTimerDisplay();
+                clearInterval(quizTimerInterval);
+                quizTimerInterval = setInterval(() => {
+                    quizTimeLeft--;
+                    updateTimerDisplay();
+                    if (quizTimeLeft <= 0) {
+                        clearInterval(quizTimerInterval);
+                        if(!answered) handleAnswer(-1, null); // Timeout
+                    }
+                }, 1000);
+            }
+        }
+
+        function updateTimerDisplay() {
+            const display = document.getElementById('quiz-timer-display');
+            display.innerText = `00:${quizTimeLeft.toString().padStart(2, '0')}`;
+            if(quizTimeLeft <= 10) {
+                display.classList.add('text-red-600', 'bg-red-100', 'border-red-300', 'animate-pulse');
+                display.classList.remove('text-slate-700', 'bg-slate-100', 'border-slate-200');
+            } else {
+                display.classList.remove('text-red-600', 'bg-red-100', 'border-red-300', 'animate-pulse');
+                display.classList.add('text-slate-700', 'bg-slate-100', 'border-slate-200');
+            }
+        }
+
+        function handleAnswer(selectedIdx, btnElement) {
+            if (answered) return;
+            answered = true;
+            clearInterval(quizTimerInterval);
+
+            const q = activeQuizQs[currQIndex];
+            const isCorrect = selectedIdx === q.a;
+            
+            if (isCorrect) quizScore++;
+            triggerCelebration(isCorrect);
+
+            // Style buttons
+            const btns = document.querySelectorAll('.quiz-opt-btn');
+            btns.forEach((btn, idx) => {
+                btn.disabled = true;
+                btn.classList.remove('hover:border-emerald-400', 'hover:bg-emerald-50', 'hover:shadow-md');
+                
+                if (idx === q.a) {
+                    btn.classList.replace('bg-slate-50', 'bg-emerald-100');
+                    btn.classList.replace('border-slate-200', 'border-emerald-500');
+                    btn.classList.add('text-emerald-900', 'shadow-md');
+                } else if (idx === selectedIdx) {
+                    btn.classList.replace('bg-slate-50', 'bg-rose-100');
+                    btn.classList.replace('border-slate-200', 'border-rose-500');
+                    btn.classList.add('text-rose-900');
+                } else {
+                    btn.classList.add('opacity-40');
+                }
+            });
+
+            // Show explanation
+            document.getElementById('quiz-exp-text').innerText = q.exp;
+            document.getElementById('quiz-ref-text').innerText = `المرجع: ${q.ref}`;
+            document.getElementById('quiz-explanation-box').classList.remove('hidden');
+
+            const nextBtn = document.getElementById('btn-next-q');
+            if (currQIndex === activeQuizQs.length - 1) {
+                nextBtn.innerText = 'إنهاء وعرض النتيجة';
+                nextBtn.classList.replace('bg-emerald-600', 'bg-slate-900');
+                nextBtn.classList.replace('hover:bg-emerald-700', 'hover:bg-slate-800');
+            } else {
+                nextBtn.innerText = 'السؤال التالي';
+                nextBtn.classList.replace('bg-slate-900', 'bg-emerald-600');
+                nextBtn.classList.replace('hover:bg-slate-800', 'hover:bg-emerald-700');
+            }
+        }
+
+        function nextQuestion() {
+            if (currQIndex < activeQuizQs.length - 1) {
+                currQIndex++;
+                renderQuestion();
+            } else {
+                // Finish
+                document.getElementById('quiz-playing').classList.add('hidden');
+                document.getElementById('quiz-finished').classList.remove('hidden');
+                document.getElementById('quiz-final-score').innerText = `${quizScore} / ${activeQuizQs.length}`;
+            }
+        }
+
+        function resetQuizView() {
+            document.getElementById('quiz-finished').classList.add('hidden');
+            document.getElementById('quiz-setup').classList.remove('hidden');
+        }
+
+
+        // --- FOCUS SESSION (POMODORO) ---
+        let focusTimeLeft = 25 * 60; // 25 mins
+        let focusTimerInterval = null;
+        let isFocusRunning = false;
+
+        function updateFocusDisplay() {
+            const m = Math.floor(focusTimeLeft / 60).toString().padStart(2, '0');
+            const s = (focusTimeLeft % 60).toString().padStart(2, '0');
+            document.getElementById('focus-timer-display').innerText = `${m}:${s}`;
+        }
+
+        function toggleFocusTimer() {
+            const playIcon = document.getElementById('icon-play');
+            const pauseIcon = document.getElementById('icon-pause');
+            const btn = document.getElementById('btn-focus-toggle');
+
+            if (isFocusRunning) {
+                // Pause
+                clearInterval(focusTimerInterval);
+                isFocusRunning = false;
+                playIcon.classList.remove('hidden');
+                pauseIcon.classList.add('hidden');
+                btn.classList.replace('bg-amber-500', 'bg-emerald-600');
+                btn.classList.replace('hover:bg-amber-600', 'hover:bg-emerald-500');
+            } else {
+                // Start
+                isFocusRunning = true;
+                playIcon.classList.add('hidden');
+                pauseIcon.classList.remove('hidden');
+                btn.classList.replace('bg-emerald-600', 'bg-amber-500');
+                btn.classList.replace('hover:bg-emerald-500', 'hover:bg-amber-600');
+                
+                focusTimerInterval = setInterval(() => {
+                    if (focusTimeLeft > 0) {
+                        focusTimeLeft--;
+                        updateFocusDisplay();
+                    } else {
+                        clearInterval(focusTimerInterval);
+                        isFocusRunning = false;
+                        alert("انتهت جلسة التركيز الممتدة لـ 25 دقيقة! خذ استراحة.");
+                        resetFocusTimer();
+                    }
+                }, 1000);
+            }
+        }
+
+        function resetFocusTimer() {
+            clearInterval(focusTimerInterval);
+            isFocusRunning = false;
+            focusTimeLeft = 25 * 60;
+            updateFocusDisplay();
+            
+            document.getElementById('icon-play').classList.remove('hidden');
+            document.getElementById('icon-pause').classList.add('hidden');
+            const btn = document.getElementById('btn-focus-toggle');
+            btn.classList.add('bg-emerald-600', 'hover:bg-emerald-500');
+            btn.classList.remove('bg-amber-500', 'hover:bg-amber-600');
+        }
+
+        // Init Focus Display
+        updateFocusDisplay();
+
+    </script>
+</body>
+</html>
