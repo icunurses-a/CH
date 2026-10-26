@@ -52,6 +52,34 @@
             100% { transform: scale(2); opacity: 0; }
         }
 
+        /* Coins & Grading Animations */
+        .coin-pop {
+            position: absolute;
+            left: 50%;
+            top: 40%;
+            transform: translate(-50%, -50%);
+            animation: floatUpCoin 1s ease-out forwards;
+            font-size: 3rem;
+            font-weight: 900;
+            color: #fbbf24;
+            text-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            pointer-events: none;
+            z-index: 100;
+        }
+        @keyframes floatUpCoin {
+            0% { opacity: 0; transform: translate(-50%, -10px) scale(0.5); }
+            20% { opacity: 1; transform: translate(-50%, -30px) scale(1.2); }
+            100% { opacity: 0; transform: translate(-50%, -120px) scale(1); }
+        }
+        .stamp-anim {
+            animation: stamp 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            display: inline-block;
+        }
+        @keyframes stamp {
+            0% { transform: scale(3) rotate(-20deg); opacity: 0; }
+            100% { transform: scale(1) rotate(-10deg); opacity: 1; }
+        }
+
         /* Fade in views */
         .fade-in { animation: fadeIn 0.4s ease-out forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -119,6 +147,13 @@
                 </div>
                 
                 <div class="flex items-center gap-2 md:gap-4 overflow-x-auto pb-2 md:pb-0 w-full md:w-auto shrink-0 hide-scrollbar">
+                    
+                    <!-- Coins Counter -->
+                    <div class="flex items-center bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-xl shrink-0 shadow-sm" title="رصيد العملات">
+                        <span class="text-xl ml-2">🪙</span>
+                        <span id="global-coin-counter" class="font-black text-amber-600 text-lg">0</span>
+                    </div>
+
                     <!-- Tools -->
                     <div class="flex items-center bg-slate-100 p-1 rounded-xl border shrink-0">
                         <button onclick="toggleFullScreen()" class="p-2.5 rounded-lg text-slate-500 hover:bg-slate-200 transition-all font-bold text-sm flex items-center gap-1" title="ملء الشاشة">
@@ -232,7 +267,7 @@
                             </button>
                         </div>
 
-                        <div id="quiz-playing" class="hidden h-full flex-col">
+                        <div id="quiz-playing" class="hidden h-full flex-col relative">
                             <div class="flex justify-between items-center mb-6 pb-4 border-b-2 border-slate-100">
                                 <span id="quiz-progress" class="font-black text-emerald-700 text-lg bg-emerald-50 px-4 py-1 rounded-full"></span>
                                 <div id="quiz-timer" class="font-mono text-2xl font-black bg-slate-100 text-slate-700 px-5 py-1 rounded-xl border-2 tracking-widest"></div>
@@ -250,10 +285,23 @@
                             </div>
                         </div>
 
-                        <div id="quiz-finished" class="hidden text-center py-20 flex-col items-center justify-center">
-                            <h2 class="text-5xl font-black text-emerald-800 mb-4">انتهى التحدي!</h2>
-                            <p class="text-2xl text-slate-600 mb-8 font-bold">النتيجة: <span id="quiz-score" class="font-black text-emerald-600 text-5xl mx-2 bg-emerald-50 px-4 py-1 rounded-xl border-2 border-emerald-200"></span></p>
-                            <button onclick="document.getElementById('nav-quiz').click()" class="px-10 py-4 bg-slate-800 text-white rounded-full font-black text-xl hover:bg-slate-700 shadow-xl transition-all hover:scale-105">إعادة الاختبار</button>
+                        <div id="quiz-finished" class="hidden text-center py-10 flex-col items-center justify-center relative overflow-hidden">
+                            <h2 class="text-5xl font-black text-emerald-800 mb-2">انتهى التحدي!</h2>
+                            
+                            <!-- Grading & Scoring -->
+                            <div class="my-6 bg-slate-50 p-8 rounded-3xl border-2 border-slate-200 shadow-inner w-full max-w-lg relative mx-auto">
+                                <div id="quiz-grade" class="absolute -top-6 -right-6 text-6xl stamp-anim"></div>
+                                <p class="text-2xl text-slate-600 mb-6 font-bold">النتيجة: <span id="quiz-score" class="font-black text-emerald-600 text-5xl mx-2"></span></p>
+                                
+                                <div class="flex justify-center items-center gap-3 text-3xl font-black text-amber-500 bg-amber-100 p-5 rounded-2xl border border-amber-200 shadow-sm">
+                                    <span>المكافأة:</span>
+                                    <span id="quiz-earned-coins" dir="ltr">+0</span>
+                                    <span>🪙</span>
+                                </div>
+                                <p id="quiz-feedback-msg" class="mt-6 text-xl font-bold text-slate-600"></p>
+                            </div>
+
+                            <button onclick="resetQuiz()" class="px-10 py-4 bg-slate-800 text-white rounded-full font-black text-xl hover:bg-slate-700 shadow-xl transition-all hover:scale-105">إعادة الاختبار</button>
                         </div>
                     </div>
 
@@ -746,6 +794,8 @@
         let useTimer = false;
         let timePerQ = 60;
         let answered = false;
+        let globalCoins = 0;
+        let sessionCoins = 0;
 
         function startQuiz() {
             const countSelect = document.getElementById('quiz-count').value;
@@ -761,6 +811,7 @@
             
             currQIndex = 0;
             quizScore = 0;
+            sessionCoins = 0;
 
             document.getElementById('quiz-setup').classList.add('hidden');
             document.getElementById('quiz-playing').classList.remove('hidden');
@@ -823,7 +874,21 @@
             const q = activeQuizQs[currQIndex];
             const isCorrect = selectedIdx === q.a;
             
-            if (isCorrect) quizScore++;
+            if (isCorrect) {
+                quizScore++;
+                sessionCoins += 10;
+                globalCoins += 10;
+                document.getElementById('global-coin-counter').innerText = globalCoins;
+                
+                // إظهار حركة العملة (Floating Coin Animation)
+                const container = document.getElementById('quiz-playing');
+                const pop = document.createElement('div');
+                pop.className = 'coin-pop';
+                pop.innerText = '+10 🪙';
+                container.appendChild(pop);
+                setTimeout(() => pop.remove(), 1000);
+            }
+            
             triggerCelebration(isCorrect);
 
             const btns = document.querySelectorAll('.quiz-opt-btn');
@@ -868,10 +933,46 @@
                 document.getElementById('quiz-playing').classList.add('hidden');
                 document.getElementById('quiz-finished').classList.remove('hidden');
                 document.getElementById('quiz-score').innerText = `${quizScore} / ${activeQuizQs.length}`;
+                document.getElementById('quiz-earned-coins').innerText = `+${sessionCoins}`;
+                
+                // حساب التقييم (Grading System)
+                const pct = (quizScore / activeQuizQs.length) * 100;
+                const gradeEl = document.getElementById('quiz-grade');
+                const feedbackEl = document.getElementById('quiz-feedback-msg');
+                
+                // إعادة تشغيل الحركة (Reset Animation)
+                gradeEl.classList.remove('stamp-anim');
+                void gradeEl.offsetWidth; // trigger reflow
+                gradeEl.classList.add('stamp-anim');
+
+                if (pct >= 90) {
+                    gradeEl.innerHTML = 'A+ 🏆';
+                    gradeEl.className = 'absolute -top-8 -right-8 text-7xl stamp-anim text-emerald-600 drop-shadow-lg';
+                    feedbackEl.innerText = 'أداء أسطوري! أنت عبقري في الصحة المجتمعية.';
+                } else if (pct >= 80) {
+                    gradeEl.innerHTML = 'B 🌟';
+                    gradeEl.className = 'absolute -top-8 -right-8 text-7xl stamp-anim text-blue-500 drop-shadow-lg';
+                    feedbackEl.innerText = 'عمل رائع جداً! استمر في هذا التألق.';
+                } else if (pct >= 70) {
+                    gradeEl.innerHTML = 'C 👍';
+                    gradeEl.className = 'absolute -top-8 -right-8 text-7xl stamp-anim text-yellow-500 drop-shadow-lg';
+                    feedbackEl.innerText = 'جيد! لكن يمكنك تحقيق الأفضل في المرة القادمة.';
+                } else if (pct >= 60) {
+                    gradeEl.innerHTML = 'D 🤔';
+                    gradeEl.className = 'absolute -top-8 -right-8 text-7xl stamp-anim text-orange-500 drop-shadow-lg';
+                    feedbackEl.innerText = 'مقبول. تحتاج إلى مراجعة بعض المعلومات بتركيز.';
+                } else {
+                    gradeEl.innerHTML = 'F 💔';
+                    gradeEl.className = 'absolute -top-8 -right-8 text-7xl stamp-anim text-rose-600 drop-shadow-lg';
+                    feedbackEl.innerText = 'لا تستسلم! أعد قراءة الملخصات واستخدم البطاقات الذكية وحاول مرة أخرى.';
+                }
             }
         }
 
-        // Reset handled by nav button click
+        function resetQuiz() {
+            document.getElementById('quiz-finished').classList.add('hidden');
+            document.getElementById('quiz-setup').classList.remove('hidden');
+        }
 
         // --- FOCUS SESSION (POMODORO) ---
         let focusTimeLeft = 25 * 60;
