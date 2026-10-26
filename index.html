@@ -55,6 +55,10 @@
         /* Fade in views */
         .fade-in { animation: fadeIn 0.4s ease-out forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Hide scrollbar for topbar on mobile */
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
 <body class="flex flex-col h-screen text-slate-800">
@@ -66,17 +70,22 @@
     <div id="celebration-overlay">
         <div id="celebration-box" class="celebration-box">
             <svg id="celebration-icon" class="w-32 h-32 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"></svg>
-            <h2 id="celebration-text" class="text-white text-5xl font-black mt-4 drop-shadow-lg tracking-wide"></h2>
+            <h2 id="celebration-text" class="text-white text-5xl font-black mt-4 drop-shadow-lg tracking-wide text-center"></h2>
         </div>
     </div>
 
-    <div class="flex flex-1 overflow-hidden relative">
+    <div class="flex flex-1 overflow-hidden relative w-full">
         
         <!-- Sidebar -->
-        <aside id="sidebar" class="w-72 bg-slate-900 text-white flex flex-col shadow-2xl z-30 transition-all flex-shrink-0">
-            <div class="p-6 border-b border-slate-800 flex items-center gap-3">
-                <svg class="w-10 h-10 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
-                <h1 class="text-2xl font-black bg-gradient-to-r from-emerald-400 to-teal-200 bg-clip-text text-transparent">الصحة المجتمعية</h1>
+        <aside id="sidebar" class="w-72 bg-slate-900 text-white flex-col shadow-2xl z-40 transition-transform transform absolute inset-y-0 right-0 md:relative md:translate-x-0 flex flex-shrink-0 translate-x-full h-full">
+            <div class="p-6 border-b border-slate-800 flex items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                    <svg class="w-10 h-10 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                    <h1 class="text-2xl font-black bg-gradient-to-r from-emerald-400 to-teal-200 bg-clip-text text-transparent">الصحة المجتمعية</h1>
+                </div>
+                <button onclick="toggleMobileMenu()" class="md:hidden text-slate-400 hover:text-white shrink-0">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
             </div>
             <nav class="flex-1 p-4 space-y-2 overflow-y-auto">
                 <button onclick="switchView('study')" id="nav-study" class="nav-btn w-full flex items-center gap-3 px-4 py-4 rounded-xl bg-emerald-600 text-white font-bold transition-all shadow-md text-lg">المحتوى الدراسي</button>
@@ -87,50 +96,68 @@
         </aside>
 
         <!-- Main Content -->
-        <main class="flex-1 flex flex-col bg-slate-50 relative overflow-hidden">
+        <main class="flex-1 flex flex-col bg-slate-50 relative overflow-hidden w-full">
             
             <!-- Topbar Tools & Views -->
-            <header class="h-20 bg-white border-b shadow-sm flex items-center justify-between px-6 z-20 shrink-0">
-                <h2 id="page-title" class="text-2xl font-black text-emerald-800">المحتوى الدراسي</h2>
+            <header class="min-h-20 bg-white border-b shadow-sm flex flex-wrap md:flex-nowrap items-center justify-between p-4 md:px-6 z-20 shrink-0 gap-4">
+                <div class="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
+                    <h2 id="page-title" class="text-xl md:text-2xl font-black text-emerald-800 truncate">المحتوى الدراسي</h2>
+                    <button onclick="toggleMobileMenu()" class="md:hidden p-2 bg-slate-100 rounded-lg text-slate-600 hover:bg-slate-200 shrink-0">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                    </button>
+                </div>
                 
-                <div class="flex items-center gap-4">
+                <div class="flex items-center gap-2 md:gap-4 overflow-x-auto pb-2 md:pb-0 w-full md:w-auto shrink-0 hide-scrollbar">
                     <!-- Tools -->
-                    <div class="flex items-center bg-slate-100 p-1 rounded-xl border">
-                        <button id="btn-highlight" onclick="toggleHighlight()" class="p-2.5 rounded-lg text-slate-500 hover:bg-yellow-100 hover:text-yellow-700 transition-all font-bold text-sm flex items-center gap-2" title="قلم التحديد">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
-                            تحديد
+                    <div class="flex items-center bg-slate-100 p-1 rounded-xl border shrink-0">
+                        <button onclick="toggleFullScreen()" class="p-2.5 rounded-lg text-slate-500 hover:bg-slate-200 transition-all font-bold text-sm flex items-center gap-1" title="ملء الشاشة">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
                         </button>
-                        <input type="color" id="hl-color" value="#fef08a" class="w-8 h-8 rounded cursor-pointer border-0 bg-transparent mx-1" title="لون التحديد">
                         <div class="w-px h-6 bg-slate-300 mx-1"></div>
-                        <button id="btn-laser" onclick="toggleLaser()" class="p-2.5 rounded-lg text-slate-500 hover:bg-red-100 hover:text-red-700 transition-all font-bold text-sm flex items-center gap-2" title="قلم الليزر">
+                        <button id="btn-highlight" onclick="toggleHighlight()" class="p-2.5 rounded-lg text-slate-500 hover:bg-yellow-100 hover:text-yellow-700 transition-all font-bold text-sm flex items-center gap-1" title="قلم التحديد">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                            <span class="hidden md:inline">تحديد</span>
+                        </button>
+                        <input type="color" id="hl-color" value="#fef08a" class="w-8 h-8 rounded cursor-pointer border-0 bg-transparent mx-1 shrink-0" title="لون التحديد">
+                        <div class="w-px h-6 bg-slate-300 mx-1"></div>
+                        <button id="btn-laser" onclick="toggleLaser()" class="p-2.5 rounded-lg text-slate-500 hover:bg-red-100 hover:text-red-700 transition-all font-bold text-sm flex items-center gap-1" title="قلم الليزر">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"></path></svg>
-                            ليزر
+                            <span class="hidden md:inline">ليزر</span>
                         </button>
                     </div>
 
                     <!-- View Modes -->
-                    <div class="flex items-center bg-emerald-50 p-1 rounded-xl border border-emerald-200">
-                        <button onclick="setLayout('standard')" id="layout-standard" class="p-2.5 rounded-lg bg-white shadow-sm text-emerald-700 transition-all font-bold text-sm">التطبيق فقط</button>
-                        <button onclick="setLayout('split')" id="layout-split" class="p-2.5 rounded-lg text-emerald-600 hover:bg-white hover:shadow-sm transition-all font-bold text-sm">شاشة منقسمة</button>
-                        <button onclick="setLayout('full-pdf')" id="layout-full" class="p-2.5 rounded-lg text-emerald-600 hover:bg-white hover:shadow-sm transition-all font-bold text-sm">المرجع (PDF) فقط</button>
+                    <div class="flex items-center bg-emerald-50 p-1 rounded-xl border border-emerald-200 shrink-0">
+                        <button onclick="setLayout('standard')" id="layout-standard" class="p-2.5 rounded-lg bg-white shadow-sm text-emerald-700 transition-all font-bold text-sm flex items-center gap-1" title="التطبيق فقط">
+                            <svg class="w-5 h-5 md:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                            <span class="hidden md:inline">التطبيق</span>
+                        </button>
+                        <button onclick="setLayout('split')" id="layout-split" class="p-2.5 rounded-lg text-emerald-600 hover:bg-white hover:shadow-sm transition-all font-bold text-sm flex items-center gap-1" title="شاشة منقسمة">
+                            <svg class="w-5 h-5 md:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path></svg>
+                            <span class="hidden md:inline">منقسمة</span>
+                        </button>
+                        <button onclick="setLayout('full-pdf')" id="layout-full" class="p-2.5 rounded-lg text-emerald-600 hover:bg-white hover:shadow-sm transition-all font-bold text-sm flex items-center gap-1" title="المرجع فقط">
+                            <svg class="w-5 h-5 md:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                            <span class="hidden md:inline">المرجع</span>
+                        </button>
                     </div>
                 </div>
             </header>
 
             <!-- Layout Wrapper -->
-            <div id="layout-wrapper" class="flex-1 flex overflow-hidden p-4 gap-4">
+            <div id="layout-wrapper" class="flex-1 flex flex-col md:flex-row overflow-hidden p-2 md:p-4 gap-2 md:gap-4 w-full h-full relative">
                 
                 <!-- PDF View -->
-                <div id="pdf-view" class="hidden h-full bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex-col">
-                    <div class="bg-slate-800 text-white p-2 text-center font-bold text-sm flex justify-between px-4 items-center">
-                        <span>المرجع: 01-150.pdf</span>
-                        <span class="text-xs bg-slate-700 px-2 py-1 rounded text-slate-300">عرض حي</span>
+                <div id="pdf-view" class="hidden w-full h-1/2 md:h-full md:w-1/2 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex-col transition-all duration-300">
+                    <div class="bg-slate-800 text-white p-2 text-center font-bold text-sm flex justify-between px-4 items-center shrink-0">
+                        <span class="truncate">المرجع: 01-150.pdf</span>
+                        <span class="text-xs bg-slate-700 px-2 py-1 rounded text-slate-300 whitespace-nowrap">عرض حي</span>
                     </div>
-                    <iframe src="01-150.pdf" width="100%" height="100%" style="min-height: 80vh; border: none; flex: 1;"></iframe>
+                    <iframe src="01-150.pdf" class="w-full h-full border-none flex-1"></iframe>
                 </div>
 
                 <!-- App View -->
-                <div id="app-view" class="w-full h-full overflow-y-auto bg-white rounded-2xl shadow-sm border border-slate-200 p-8 relative">
+                <div id="app-view" class="w-full h-full overflow-y-auto bg-white rounded-2xl shadow-sm border border-slate-200 p-4 md:p-8 relative transition-all duration-300">
                     
                     <!-- 1. Study Hub -->
                     <div id="view-study" class="view-section fade-in max-w-4xl mx-auto text-lg leading-loose text-slate-700">
@@ -429,9 +456,43 @@
         let highlightActive = false;
         let laserActive = false;
 
+        // --- FULLSCREEN & MOBILE MENU ---
+        function toggleFullScreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => {
+                    console.log(`Error attempting to enable fullscreen: ${err.message}`);
+                });
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
+        }
+
+        function toggleMobileMenu() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('translate-x-full');
+        }
+
+        // إغلاق القائمة الجانبية عند النقر خارجها أو النقر على أحد أزرار التصفح في الجوال
+        document.addEventListener('click', (e) => {
+            const sidebar = document.getElementById('sidebar');
+            if (window.innerWidth < 768 && !sidebar.classList.contains('translate-x-full')) {
+                if (!sidebar.contains(e.target) && !e.target.closest('button[onclick="toggleMobileMenu()"]')) {
+                    sidebar.classList.add('translate-x-full');
+                }
+            }
+        });
+
         // --- NAVIGATION & LAYOUT ---
         function switchView(viewId) {
             currentView = viewId;
+            
+            // إغلاق القائمة في شاشات الجوال بعد الاختيار
+            if(window.innerWidth < 768) {
+                document.getElementById('sidebar').classList.add('translate-x-full');
+            }
+            
             // Update nav buttons
             document.querySelectorAll('.nav-btn').forEach(btn => {
                 btn.classList.remove('bg-emerald-600', 'text-white', 'shadow-md');
@@ -454,8 +515,9 @@
 
         function setLayout(mode) {
             layoutMode = mode;
-            const sidebar = document.getElementById('sidebar');
             const pdfView = document.getElementById('pdf-view');
+            const appView = document.getElementById('app-view');
+            const sidebar = document.getElementById('sidebar');
             
             // Highlight Buttons
             ['standard', 'split', 'full-pdf'].forEach(m => {
@@ -470,23 +532,22 @@
             activeBtn.classList.add('bg-white', 'shadow-sm', 'text-emerald-700');
             activeBtn.classList.remove('text-emerald-600');
 
-            // Layout Logic
-            sidebar.classList.remove('hidden');
-            pdfView.classList.add('hidden');
+            // Responsive Layout Logic using Tailwind
+            pdfView.className = 'w-full bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex-col transition-all duration-300';
+            appView.className = 'w-full overflow-y-auto bg-white rounded-2xl shadow-sm border border-slate-200 p-4 md:p-8 relative transition-all duration-300';
 
             if (mode === 'full-pdf') {
-                sidebar.classList.add('hidden');
-                pdfView.classList.remove('hidden');
-                pdfView.style.width = '100%';
-                document.getElementById('app-view').classList.add('hidden');
+                pdfView.classList.add('flex', 'h-full');
+                appView.classList.add('hidden');
+                if(window.innerWidth >= 768) sidebar.classList.add('md:hidden');
             } else if (mode === 'split') {
-                pdfView.classList.remove('hidden');
-                pdfView.style.width = '50%';
-                document.getElementById('app-view').classList.remove('hidden');
-                document.getElementById('app-view').style.width = '50%';
+                pdfView.classList.add('flex', 'h-1/2', 'md:h-full', 'md:w-1/2');
+                appView.classList.add('h-1/2', 'md:h-full', 'md:w-1/2');
+                sidebar.classList.remove('md:hidden');
             } else {
-                document.getElementById('app-view').classList.remove('hidden');
-                document.getElementById('app-view').style.width = '100%';
+                pdfView.classList.add('hidden');
+                appView.classList.add('h-full', 'md:w-full');
+                sidebar.classList.remove('md:hidden');
             }
         }
 
