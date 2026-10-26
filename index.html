@@ -63,6 +63,17 @@
 </head>
 <body class="flex flex-col h-screen text-slate-800">
 
+    <!-- Welcome Overlay for Fullscreen Start -->
+    <div id="welcome-overlay" class="fixed inset-0 bg-slate-900 z-[99999] flex flex-col items-center justify-center text-white transition-opacity duration-500">
+        <svg class="w-24 h-24 text-emerald-400 mb-6 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
+        <h1 class="text-4xl md:text-6xl font-black text-emerald-400 mb-4 text-center drop-shadow-lg">منصة الصحة المجتمعية</h1>
+        <p class="text-lg md:text-2xl mb-10 text-slate-300 text-center px-4 font-semibold">تفاعلية، شاملة، وذكية</p>
+        <button onclick="startAppFullScreen()" class="px-8 py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-full font-black text-xl md:text-2xl shadow-[0_0_20px_rgba(16,185,129,0.4)] hover:scale-105 transition-all flex items-center gap-3">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
+            ابدأ المذاكرة بملء الشاشة
+        </button>
+    </div>
+
     <!-- Laser Canvas -->
     <canvas id="laser-canvas"></canvas>
 
@@ -151,9 +162,15 @@
                 <div id="pdf-view" class="hidden w-full h-1/2 md:h-full md:w-1/2 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex-col transition-all duration-300">
                     <div class="bg-slate-800 text-white p-2 text-center font-bold text-sm flex justify-between px-4 items-center shrink-0">
                         <span class="truncate">المرجع: 01-150.pdf</span>
-                        <span class="text-xs bg-slate-700 px-2 py-1 rounded text-slate-300 whitespace-nowrap">عرض حي</span>
+                        <span class="text-xs bg-emerald-500 px-2 py-1 rounded text-white whitespace-nowrap shadow-sm">قراءة تفاعلية</span>
                     </div>
-                    <iframe src="01-150.pdf" class="w-full h-full border-none flex-1"></iframe>
+                    <object data="01-150.pdf#view=FitH&toolbar=0&navpanes=0&scrollbar=0" type="application/pdf" class="w-full h-full border-none flex-1 bg-slate-100">
+                        <div class="flex flex-col items-center justify-center h-full p-6 text-center bg-slate-50">
+                            <svg class="w-16 h-16 text-slate-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                            <p class="text-slate-600 font-bold mb-4 text-lg">متصفحك لا يدعم العرض الداخلي لملفات PDF.</p>
+                            <a href="01-150.pdf" target="_blank" class="px-8 py-3 bg-emerald-600 text-white rounded-xl font-black hover:bg-emerald-500 transition-all shadow-md">اضغط هنا لفتح الملف وقراءته</a>
+                        </div>
+                    </object>
                 </div>
 
                 <!-- App View -->
@@ -455,6 +472,32 @@
         let layoutMode = 'standard';
         let highlightActive = false;
         let laserActive = false;
+
+        // --- STARTUP LOGIC ---
+        function startAppFullScreen() {
+            const overlay = document.getElementById('welcome-overlay');
+            
+            // طلب ملء الشاشة (يدعم جميع المتصفحات)
+            const elem = document.documentElement;
+            if (elem.requestFullscreen) {
+                elem.requestFullscreen().catch(e => console.log(e));
+            } else if (elem.webkitRequestFullscreen) { /* Safari */
+                elem.webkitRequestFullscreen().catch(e => console.log(e));
+            } else if (elem.msRequestFullscreen) { /* IE11 */
+                elem.msRequestFullscreen().catch(e => console.log(e));
+            }
+
+            // إخفاء شاشة الترحيب بتأثير التلاشي
+            overlay.style.opacity = '0';
+            setTimeout(() => {
+                overlay.style.display = 'none';
+            }, 500);
+
+            // تفعيل وضع الشاشة المنقسمة افتراضياً ليظهر الـ PDF مباشرة بجانب التطبيق في الشاشات الكبيرة
+            if (window.innerWidth >= 768) {
+                setLayout('split');
+            }
+        }
 
         // --- FULLSCREEN & MOBILE MENU ---
         function toggleFullScreen() {
