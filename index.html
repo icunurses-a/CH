@@ -7,6 +7,8 @@
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <!-- Tone.js for Audio -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
     <style>
         body { font-family: 'Cairo', sans-serif; background-color: #f8fafc; overflow: hidden; }
         
@@ -1033,6 +1035,87 @@
         }
 
         updateFocusDisplay();
+
+        // --- SOUNDS & SPARKS ---
+        let audioInitialized = false;
+        let synth;
+
+        // نهيئ الصوت فقط بعد تفاعل المستخدم (قوانين المتصفحات)
+        async function initAudio() {
+            if (!audioInitialized) {
+                await Tone.start();
+                synth = new Tone.PolySynth(Tone.Synth).toDestination();
+                synth.volume.value = -8; // خفض مستوى الصوت ليكون مريحاً
+                audioInitialized = true;
+            }
+        }
+
+        function playSound(type) {
+            if (!audioInitialized || !synth) return;
+            const now = Tone.now();
+            if (type === 'click') {
+                synth.triggerAttackRelease("C5", "32n", now, 0.1);
+            } else if (type === 'correct') {
+                synth.triggerAttackRelease(["C5", "E5", "G5"], "8n", now, 0.3);
+            } else if (type === 'wrong') {
+                synth.triggerAttackRelease("C3", "4n", now, 0.3);
+            }
+        }
+
+        // تفاعل الماوس لإصدار شرارات وتفعيل الصوت
+        document.addEventListener('click', (e) => {
+            initAudio(); 
+            createSparks(e.clientX, e.clientY);
+        });
+
+        document.addEventListener('mousedown', (e) => {
+             if (e.target.closest('button') || e.target.closest('.nav-btn')) {
+                 playSound('click');
+             }
+        });
+
+        // دالة إنشاء الشرارات
+        function createSparks(x, y) {
+            for (let i = 0; i < 6; i++) {
+                const spark = document.createElement('div');
+                spark.className = 'spark';
+                spark.style.left = x + 'px';
+                spark.style.top = y + 'px';
+                
+                const angle = Math.random() * Math.PI * 2;
+                const distance = Math.random() * 60 + 30; // مسافة التناثر
+                const tx = Math.cos(angle) * distance + 'px';
+                const ty = Math.sin(angle) * distance + 'px';
+                
+                spark.style.setProperty('--tx', tx);
+                spark.style.setProperty('--ty', ty);
+                spark.style.width = (Math.random() * 6 + 4) + 'px';
+                spark.style.height = spark.style.width;
+                
+                const colors = ['#34d399', '#fbbf24', '#fb7185', '#60a5fa'];
+                spark.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+
+                document.body.appendChild(spark);
+                setTimeout(() => spark.remove(), 600); // إزالة العنصر بعد انتهاء الحركة
+            }
+        }
+
+        // --- RETAKE FALSE QUESTIONS ---
+        function retakeFalseQs() {
+            if(falseQuestionsArray.length === 0) return;
+            
+            // نقل الأسئلة الخاطئة لتصبح هي أسئلة الاختبار الحالي
+            activeQuizQs = [...falseQuestionsArray];
+            falseQuestionsArray = []; // تصفير المصفوفة للمحاولة الجديدة
+            currQIndex = 0;
+            quizScore = 0;
+            sessionCoins = 0;
+            
+            document.getElementById('quiz-finished').classList.add('hidden');
+            document.getElementById('quiz-playing').classList.remove('hidden');
+            
+            renderQuestion();
+        }
     </script>
 </body>
 </html>
